@@ -44,6 +44,18 @@ static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 
+static char *_DebugShortenPath(char *path)
+{
+	char *mark1 = strrchr(path, '@');
+	if (mark1 && ! strncmp(mark1, "@ /", 3))
+	{
+		char *mark2 = strrchr(path, '/');
+		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
+	}
+	
+	return path;
+}
+
 void DebugPreflight(char *logname, int redirect, int level)
 {
 	if (gDebugLevel == 1)
@@ -56,7 +68,7 @@ void DebugPostflight()
 
 }
 
-void DebugMessage(const char *format, ...)
+void DebugMessage(int level, const char *format, ...)
 {
 	char buffer[512];
 	va_list args;
@@ -68,6 +80,11 @@ void DebugMessage(const char *format, ...)
 		va_start(args, format);
 		vsnprintf(buffer, sizeof(buffer), format, args);
 		va_end(args);
+
+#if DEBUG_SHORTEN_PATHS
+		// Replace full paths with file names.
+		_DebugShortenPath(buffer);
+#endif // DEBUG_SHORTEN_PATHS
 		
 		// Append a trailing linefeed if necessary
 		bytes = strlen(format);

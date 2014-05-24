@@ -24,6 +24,12 @@
 
 	@discussion
 		Wrapper to select the best implementation based on project settings.
+		
+		Specify the absolute path to a log file to direct messages there.
+		Specify a short name for the log file to use the standard location:
+			Mac: /var/log/name.log  -or-  ~/Library/Logs/name.log
+			UNIX: /var/log/name.log  -or-  ~/log/name.log
+		Pass nil to direct messages to the console via stderr.
 */ 
 
 #include "stddebug.h"

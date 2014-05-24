@@ -25,6 +25,12 @@
 	@discussion
 		Standard implementation of debug routines based on POSIX APIs,
 		with extensions for MacOS X and iOS.
+
+		Specify the absolute path to a log file to direct messages there.
+		Specify a short name for the log file to use the standard location:
+			Mac: /var/log/name.log  -or-  ~/Library/Logs/name.log
+			UNIX: /var/log/name.log  -or-  ~/log/name.log
+		Pass nil to direct messages to the console via stderr.
 */ 
 
 #include "stddebug.h"
@@ -81,6 +87,18 @@ static void _DebugLeave()
 	}
 }
 
+static char *_DebugShortenPath(char *path)
+{
+	char *mark1 = strrchr(path, '@');
+	if (mark1 && ! strncmp(mark1, "@ /", 3))
+	{
+		char *mark2 = strrchr(path, '/');
+		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
+	}
+	
+	return path;
+}
+
 void DebugPreflight(char *logname, int redirect, int level)
 {
 	_DebugEnter();
@@ -103,10 +121,19 @@ void DebugPreflight(char *logname, int redirect, int level)
 		// Determine where the log file will go
 		if (*logname != '/')
 		{
-			if (geteuid() && getenv("HOME"))
-				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", getenv("HOME"));
-			else
+			const char * home = getenv("HOME");
+		
+			if (! geteuid())
 				strcpy(buffer, "/var/log/");
+			else if (home)
+			{
+#if __APPLE__
+				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", home);
+#else
+				snprintf(buffer, sizeof(buffer), "%s/log/", home);
+#endif // __APPLE__
+				mkdir(buffer, 0700);
+			}
 		}
 		strncat(buffer, logname, sizeof(buffer)-1);
 		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
@@ -209,7 +236,7 @@ void DebugPostflight()
 	_DebugLeave();
 }
 
-void DebugMessage(__DEBUGSTR_ARG__ format, ...)
+void DebugMessage(int level, __DEBUGSTR_ARG__ format, ...)
 {
 	va_list			args;
 	CFIndex			index;
@@ -232,15 +259,23 @@ void DebugMessage(__DEBUGSTR_ARG__ format, ...)
 		// Convert the opaque CFStringRef to a UTF8 buffer
 		if (cfstr)
 		{
+#if ! DEBUG_SHORTEN_PATHS
 			// Try for the fast case, fall back to buffering otherwise
 			cstr = CFStringGetCStringPtr(cfstr, kCFStringEncodingUTF8);
+#endif // ! DEBUG_SHORTEN_PATHS
 			if (!cstr)
 			{
 				// Maximum conversion per UTF8 character = 4 bytes
 				size_t buflen = CFStringGetLength(cfstr) * 4 + 1;
 				if ((buffer = malloc(CFStringGetLength(cfstr) * 4 + 1)) &&
 						CFStringGetCString(cfstr, buffer, buflen, kCFStringEncodingUTF8))
+				{
+#if DEBUG_SHORTEN_PATHS
+					cstr = _DebugShortenPath(buffer);
+#else
 					cstr = buffer;
+#endif // DEBUG_SHORTEN_PATHS
+				}
 			}
 		}
 

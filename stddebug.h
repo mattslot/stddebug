@@ -51,6 +51,11 @@
 #define __MKVAL__(x)			#x
 #define __WHERE__				" @ " __FILE__ ":" __MKSTR__(__LINE__)
 
+// Optional flag to shorten fullpaths when logging
+#ifndef DEBUG_SHORTEN_PATHS
+	#define DEBUG_SHORTEN_PATHS	1
+#endif // DEBUG_SHORTEN_PATHS
+
 // Constants for setting logging level. Use negative values only, 
 // positive values (high bit clear) are reserved for bitmasks.
 #define DEBUG_LEVEL_NONE		 0
@@ -79,7 +84,7 @@
 	#define __DEBUGSTR_TYPE__	CFStringRef
 
   #if defined(__GNUC__) && (__GNUC__*10+__GNUC_MINOR__ >= 42) && !defined(__INTEL_COMPILER) && (TARGET_OS_MAC || TARGET_OS_EMBEDDED)
-	#define __DEBUG_MESSAGE_ATTRIBUTE__ __attribute__((format(__CFString__, 1, 2)))
+	#define __DEBUG_MESSAGE_ATTRIBUTE__ __attribute__((format(__CFString__, 2, 3)))
   #else
 	#define __DEBUG_MESSAGE_ATTRIBUTE__
   #endif
@@ -91,7 +96,7 @@
 	#define __DEBUGSTR_TYPE__	char *
 
   #ifdef __printflike
-	#define __DEBUG_MESSAGE_ATTRIBUTE__ __printflike(1, 2)
+	#define __DEBUG_MESSAGE_ATTRIBUTE__ __printflike(2, 3)
   #else
 	#define __DEBUG_MESSAGE_ATTRIBUTE__
   #endif
@@ -131,21 +136,21 @@
 
 	// Debugger and logging hooks
 
-	#define dLogMessage(l,m,...)		do { if (DebugShouldLog(l)) DebugMessage(__DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
-	#define dLogError(e,l,m,...)		do { if (DebugShouldLog(l)) DebugMessage(__DEBUGSTR__("ERROR %i: " m __WHERE__ "\n"), (int)(e), ## __VA_ARGS__); } while(0)
+	#define dLogMessage(l,m,...)		do { if (DebugShouldLog(l)) DebugMessage((l), __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
+	#define dLogError(e,l,m,...)		do { if (DebugShouldLog(l)) DebugMessage((l), __DEBUGSTR__("ERROR %i: " m __WHERE__ "\n"), (int)(e), ## __VA_ARGS__); } while(0)
 	
   #if DEBUG
-	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(__DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); DEBUGGER(); abort(); } while(0)
+	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); DEBUGGER(); abort(); } while(0)
   #else
-	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(__DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
+	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
   #endif // DEBUG
   
 #else
 
 	// Stub implementations for release
 
-	#define dLogMessage(m,...)			do { ; } while(0)
-	#define dLogError(e,m,...)			do { ; } while(0)
+	#define dLogMessage(l,m,...)		do { ; } while(0)
+	#define dLogError(e,l,m,...)		do { ; } while(0)
 
 	#define dAssertionFailure(m,...)	do { ; } while(0)
 
@@ -209,12 +214,13 @@ extern void DebugPreflight(char *logname, int redirect, int level);
 
 /*!
 	@abstract Log debug messages to the console or logfile.
+	@param level An integer specifying the debug level or priority of this message.
 	@param format A printf() style format string, followed by an argument list.
 	@discussion
 		The primary bottleneck for the debugging macros, it takes formatted error messages
 		and logs them either to stderr (by default) or an application-specified logfile.
 */
-extern void DebugMessage(__DEBUGSTR_ARG__ format, ...) __DEBUG_MESSAGE_ATTRIBUTE__;
+extern void DebugMessage(int level, __DEBUGSTR_ARG__ format, ...) __DEBUG_MESSAGE_ATTRIBUTE__;
 
 /*!
 	@abstract Log the contents of a memory block as a nicely formatted text dump.

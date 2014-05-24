@@ -1,5 +1,5 @@
 /*!
-	@file stddebug_mac_ios_buffered.c
+	@file stddebug_syslog.c
 	@abstract Common debugging utilities
 	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
 	
@@ -23,18 +23,8 @@
 
 
 	@discussion
-		Standard implementation of debug routines based on POSIX APIs, 
-		with extensions for MacOS X and iOS. This version writes log
-		messages to a memory buffer for later email/web submission.
+		Standard implementation of debug routines based on syslog facility.
 */ 
-
-#include "stddebug.h"
-
-#include <TargetConditionals.h>
-
-#if !TARGET_OS_MAC && !TARGET_OS_IPHONE
-	#error "MacOS X and iOS specific implementation"
-#endif // !TARGET_OS_MAC && !TARGET_OS_IPHONE
 
 #include <errno.h>
 #include <fcntl.h>
@@ -46,17 +36,18 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/syslimits.h>
+#include <syslog.h>
+
+#if !_WIN32
 #include <unistd.h>
+#endif // !_WIN32
 
-#include <CoreFoundation/CoreFoundation.h>
-#if TARGET_OS_MAC && !TARGET_CPU_ARM
-	#include <libproc.h>
-#endif // TARGET_OS_MAC && !TARGET_CPU_ARM
+#include "stddebug.h"
 
 
+static	char *						gIdentString = NULL;
 static	bool						gPreflighted = 0;
 static	bool						gDebugEnabled = 1;
-static	CFMutableStringRef			gOutputBuffer = NULL;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 
@@ -81,21 +72,6 @@ static void _DebugLeave()
 	}
 }
 
-static void _DebugPrintf(const CFStringRef format, ...)
-{
-	va_list			args;
-
-	if (!gOutputBuffer)
-		gOutputBuffer = CFStringCreateMutable(NULL, 0);
-	
-	if (gOutputBuffer)
-	{
-		va_start(args, format);
-		CFStringAppendFormatAndArguments(gOutputBuffer, NULL, format, args);
-		va_end(args);
-	}
-}
-
 static char *_DebugShortenPath(char *path)
 {
 	char *mark1 = strrchr(path, '@');
@@ -108,50 +84,58 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
+static int _DebugLevelToSyslogPriority(int level)
+{
+	// Note that level could be a bitmask or a negative constant
+	switch(level)
+	{
+		case DEBUG_LEVEL_NONE:
+			return LOG_NOTICE;
+		case DEBUG_LEVEL_FATAL:
+			return LOG_CRIT;
+		case DEBUG_LEVEL_FAILURE:
+		case DEBUG_LEVEL_ERROR:
+			return LOG_ERR;
+		case DEBUG_LEVEL_WARN:
+			return LOG_WARNING;
+		case DEBUG_LEVEL_DEBUG:
+			// This constant is intended to annotate debugging details during
+			// development and testing, and is higher priority than INFO, SPAM
+			return LOG_NOTICE;
+		case DEBUG_LEVEL_INFO:
+			return LOG_INFO;
+		case DEBUG_LEVEL_SPAM:
+			return LOG_DEBUG;
+	}
+	
+	return LOG_INFO;
+}
+
 void DebugPreflight(char *logname, int redirect, int level)
 {
 	_DebugEnter();
 	
-	if (!gOutputBuffer)
-		gOutputBuffer = CFStringCreateMutable(NULL, 0);
+	// logname = syslog "ident" string, prefixed to each line of output
+	// redirect = ignored
+	// level = stddebug threshold
+	
+	// The ident parameter is not copied by openlog(), but stashed and
+	// referenced later. For safety's sake, we create a persistent copy.
+	free(gIdentString);
+	gIdentString = (logname) ? strdup(logname) : NULL;
+
+	openlog(gIdentString, 0, 0);
 	
 	if (!gPreflighted)
 	{
 		time_t		now;
-		char		stamp[26] = "";
-		char		name[PATH_MAX] = "";
-		char		vers[32] = "";
-		CFStringRef cfstr = NULL;
+		char		stamp[24] = "";
 
 		// Print a pretty header
 		time(&now);
 		ctime_r(&now, stamp);
 		strtok(stamp, "\n");
-		_DebugPrintf(CFSTR("--- Log opened %s ---\n"), stamp);
-
-#if TARGET_OS_MAC || TARGET_OS_IPHONE
-		if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
-				CFBundleGetMainBundle(), CFSTR("CFBundleName"))))
-			CFStringGetCString(cfstr, name, sizeof(name), kCFStringEncodingUTF8);
-		if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
-				CFBundleGetMainBundle(), CFSTR("CFBundleVersion"))))
-			CFStringGetCString(cfstr, vers, sizeof(vers), kCFStringEncodingUTF8);
-		if (*name)
-			_DebugPrintf(CFSTR("--- %s %s ---\n"), name, vers);
-#endif // TARGET_OS_MAC || TARGET_OS_IPHONE
-#if TARGET_OS_MAC && !TARGET_CPU_ARM
-		else
-		{
-			// Handle non-bundle processes (daemons, command-line tools)
-			proc_name(getpid(), name, (uint32_t) sizeof(name));
-			if (*name) 
-  #if defined(VERSION)
-				_DebugPrintf(CFSTR("--- %s %s ---\n"), name, VERSION);
-  #else
-				_DebugPrintf(CFSTR("--- %s ---\n"), name);
-  #endif // VERSION
-		}
-#endif // TARGET_OS_MAC && !TARGET_CPU_ARM
+		syslog(LOG_NOTICE, "--- Log opened %s ---\n", stamp);
 
 		// Ensure this has been preflighted as well
 		if (gDebugLevel == 1)
@@ -179,70 +163,48 @@ void DebugPostflight()
 		time(&now);
 		ctime_r(&now, stamp);
 		strtok(stamp, "\n");
-		_DebugPrintf(CFSTR("--- Log closed %s ---\n"), stamp);
+		syslog(LOG_NOTICE, "--- Log closed %s ---\n", stamp);
+		
+		closelog();
 
+		free(gIdentString);
+		gIdentString = NULL;
 		gPreflighted = false;
 	}
 	
 	_DebugLeave();
 }
 
-void DebugMessage(int level, CFStringRef format, ...)
+void DebugMessage(int level, const char *format, ...)
 {
 	va_list			args;
-	CFIndex			index;
-	CFStringRef		cfstr = NULL;
-	const char *	cstr = NULL;
+	size_t			bytes;
+#if DEBUG_SHORTEN_PATHS
 	char *			buffer = NULL;
+#endif // DEBUG_SHORTEN_PATHS
 	
 	if (gDebugEnabled)
 	{
+		int priority = _DebugLevelToSyslogPriority(level);
+	
 		_DebugEnter();
 		if (!gPreflighted)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR);
 		
-		// Format the string, accepting %@ qualifier for CFType/NSObject
-		va_start(args, format);
-		cfstr = CFStringCreateWithFormatAndArguments(
-				kCFAllocatorDefault, NULL, format, args);
-		va_end(args);
-		
-		// Convert the opaque CFStringRef to a UTF8 buffer
-		if (cfstr)
-		{
-#if ! DEBUG_SHORTEN_PATHS
-			// Try for the fast case, fall back to buffering otherwise
-			cstr = CFStringGetCStringPtr(cfstr, kCFStringEncodingUTF8);
-#endif // ! DEBUG_SHORTEN_PATHS
-			if (!cstr)
-			{
-				// Maximum conversion per UTF8 character = 4 bytes
-				size_t buflen = CFStringGetLength(cfstr) * 4 + 1;
-				if ((buffer = malloc(CFStringGetLength(cfstr) * 4 + 1)) &&
-						CFStringGetCString(cfstr, buffer, buflen, kCFStringEncodingUTF8))
-				{
-#if DEBUG_SHORTEN_PATHS
-					cstr = _DebugShortenPath(buffer);
-#else
-					cstr = buffer;
-#endif // DEBUG_SHORTEN_PATHS
-				}
-			}
-		}
-
 		// Print out the requested message
-		if (cstr) _DebugPrintf(CFSTR("%s"), cstr);
-		
-		// Append a trailing linefeed if necessary
-		index = CFStringGetLength(format);
-		if (index && (CFStringGetCharacterAtIndex(format,index-1) != '\n'))
-			_DebugPrintf(CFSTR("\n"));
+		va_start(args, format);
+#if DEBUG_SHORTEN_PATHS
+		if (vasprintf(&buffer, format, args) >= 0)
+		{
+			syslog(priority, "%s", _DebugShortenPath(buffer));
+			free(buffer);
+		}
+		else
+#endif // DEBUG_SHORTEN_PATHS
+		vsyslog(priority, format, args);
+		va_end(args);
 			
 		_DebugLeave();
-
-		// Free any allocated buffers
-		if (cfstr) CFRelease(cfstr);
-		free(buffer);
 	}
 }
 
@@ -292,7 +254,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR);
 		
 		// Now that we have the data, print out the label and our buffer
-		_DebugPrintf(CFSTR("%s (%lu bytes):\n%s"), label, length, 
+		syslog(LOG_INFO, "%s (%lu bytes):\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\n");
 			
 		_DebugLeave();
@@ -323,10 +285,14 @@ int DebugLevel(void)
 		if (gDebugLevel == 1)
 		{
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			if (level && (*level >= '0') && (*level <= '9'))
-				gDebugLevel = strtol(level, NULL, 10);
-			else
-				gDebugLevel = DEBUG_LEVEL_ERROR;
+			if (level)
+			{
+				int value = strtol(level, NULL, 10);
+				if (value <= 0)
+					gDebugLevel = value, gDebugMask = 0;
+				else
+					gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
+			}
 		}
 		
 		_DebugLeave();
@@ -346,6 +312,9 @@ void SetDebugMask(int mask)
 
 int DebugMask(void)
 {
+	if (gDebugLevel == 1)
+		DebugLevel(); // Initialize settings
+
 	return gDebugMask;
 }
 
@@ -355,26 +324,15 @@ int DebugShouldLog(int value)
 	
 	_DebugEnter();
 	if (value < 0)
-		shouldLog = (gDebugLevel <= value) ? 1 : 0;
+		shouldLog = (DebugLevel() <= value) ? 1 : 0;
 	else 
-		shouldLog = (gDebugMask & value) ? 1 : 0;
+		shouldLog = (DebugMask() & value) ? 1 : 0;
 	_DebugLeave();
 	
 	return shouldLog;
 }
 
-CFStringRef CopyDebugHistory(void)
+char * CopyDebugHistory()
 {
-	CFStringRef		string = NULL;
-	
-	_DebugEnter();
-	
-	if (gOutputBuffer)
-		string = CFStringCreateCopy(NULL, gOutputBuffer);
-	else
-		string = CFSTR("");
-	
-	_DebugLeave();
-
-	return string;
+	return NULL;
 }

@@ -24,6 +24,12 @@
 
 	@discussion
 		Standard implementation of debug routines based on POSIX APIs.
+
+		Specify the absolute path to a log file to direct messages there.
+		Specify a short name for the log file to use the standard location:
+			Mac: /var/log/name.log  -or-  ~/Library/Logs/name.log
+			UNIX: /var/log/name.log  -or-  ~/log/name.log
+		Pass nil to direct messages to the console via stderr.
 */ 
 
 #include <errno.h>
@@ -72,6 +78,18 @@ static void _DebugLeave()
 	}
 }
 
+static char *_DebugShortenPath(char *path)
+{
+	char *mark1 = strrchr(path, '@');
+	if (mark1 && ! strncmp(mark1, "@ /", 3))
+	{
+		char *mark2 = strrchr(path, '/');
+		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
+	}
+	
+	return path;
+}
+
 void DebugPreflight(char *logname, int redirect, int level)
 {
 	_DebugEnter();
@@ -92,10 +110,19 @@ void DebugPreflight(char *logname, int redirect, int level)
 		// Determine where the log file will go
 		if (*logname != '/')
 		{
-			if (geteuid() && getenv("HOME"))
-				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", getenv("HOME"));
-			else
+			const char * home = getenv("HOME");
+		
+			if (! geteuid())
 				strcpy(buffer, "/var/log/");
+			else if (home)
+			{
+#if __APPLE__
+				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", home);
+#else
+				snprintf(buffer, sizeof(buffer), "%s/log/", home);
+#endif // __APPLE__
+				mkdir(buffer, 0700);
+			}
 		}
 		strncat(buffer, logname, sizeof(buffer)-1);
 		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
@@ -170,10 +197,13 @@ void DebugPostflight()
 	_DebugLeave();
 }
 
-void DebugMessage(const char *format, ...)
+void DebugMessage(int level, const char *format, ...)
 {
 	va_list			args;
 	size_t			bytes;
+#if DEBUG_SHORTEN_PATHS
+	char *			buffer = NULL;
+#endif // DEBUG_SHORTEN_PATHS
 	
 	if (gDebugEnabled)
 	{
@@ -183,6 +213,14 @@ void DebugMessage(const char *format, ...)
 		
 		// Print out the requested message
 		va_start(args, format);
+#if DEBUG_SHORTEN_PATHS
+		if (vasprintf(&buffer, format, args) >= 0)
+		{
+			fprintf(gOutputFILE, "%s", _DebugShortenPath(buffer));
+			free(buffer);
+		}
+		else
+#endif // DEBUG_SHORTEN_PATHS
 		vfprintf(gOutputFILE, format, args);
 		va_end(args);
 		
