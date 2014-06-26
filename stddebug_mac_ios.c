@@ -54,9 +54,9 @@
 #include <unistd.h>
 
 #include <CoreFoundation/CoreFoundation.h>
-#if TARGET_OS_MAC && !TARGET_CPU_ARM
+#if TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
 	#include <libproc.h>
-#endif // TARGET_OS_MAC && !TARGET_CPU_ARM
+#endif // TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
 
 
 static	bool						gPreflighted = 0;
@@ -176,7 +176,7 @@ void DebugPreflight(char *logname, int redirect, int level)
 		if (*name)
 			fprintf(gOutputFILE, "--- %s %s ---\n", name, vers);
 #endif // TARGET_OS_MAC || TARGET_OS_IPHONE
-#if TARGET_OS_MAC && !TARGET_CPU_ARM
+#if TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
 		else
 		{
 			// Handle non-bundle processes (daemons, command-line tools)
@@ -188,7 +188,7 @@ void DebugPreflight(char *logname, int redirect, int level)
 				fprintf(gOutputFILE, "--- %s ---\n", name);
   #endif // VERSION
 		}
-#endif // TARGET_OS_MAC && !TARGET_CPU_ARM
+#endif // TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
 
 		// Ensure this has been preflighted as well
 		if (gDebugLevel == 1)
