@@ -46,6 +46,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/syslimits.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <CoreFoundation/CoreFoundation.h>

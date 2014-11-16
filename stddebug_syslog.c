@@ -37,6 +37,7 @@
 #include <sys/stat.h>
 #include <sys/syslimits.h>
 #include <syslog.h>
+#include <time.h>
 
 #if !_WIN32
 #include <unistd.h>
