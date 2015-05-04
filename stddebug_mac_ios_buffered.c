@@ -1,7 +1,7 @@
 /*!
 	@file stddebug_mac_ios_buffered.c
 	@abstract Common debugging utilities
-	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -324,10 +324,12 @@ int DebugLevel(void)
 		if (gDebugLevel == 1)
 		{
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			if (level && (*level >= '0') && (*level <= '9'))
-				gDebugLevel = strtol(level, NULL, 10);
+			int value = (level) ? strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
+
+			if (value <= 0)
+				gDebugLevel = value, gDebugMask = 0;
 			else
-				gDebugLevel = DEBUG_LEVEL_ERROR;
+				gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
 		}
 		
 		_DebugLeave();

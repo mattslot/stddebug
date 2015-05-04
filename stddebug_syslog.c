@@ -1,7 +1,7 @@
 /*!
 	@file stddebug_syslog.c
 	@abstract Common debugging utilities
-	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -286,14 +286,12 @@ int DebugLevel(void)
 		if (gDebugLevel == 1)
 		{
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			if (level)
-			{
-				int value = strtol(level, NULL, 10);
-				if (value <= 0)
-					gDebugLevel = value, gDebugMask = 0;
-				else
-					gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
-			}
+			int value = (level) ? strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
+
+			if (value <= 0)
+				gDebugLevel = value, gDebugMask = 0;
+			else
+				gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
 		}
 		
 		_DebugLeave();

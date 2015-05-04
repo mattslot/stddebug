@@ -1,7 +1,7 @@
 /*!
 	@file stddebug_stderr.c
 	@abstract Common debugging utilities
-	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -34,60 +34,98 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/syslimits.h>
 #include <time.h>
 
-#if !_WIN32
-#include <unistd.h>
-#endif // !_WIN32
+#if _WIN32
+	#include <shlobj.h>
+	#include <windows.h>
+#else
+	#include <unistd.h>
+	#include <pthread.h>
+	#include <sys/syslimits.h>
+#endif // _WIN32
 
 #include "stddebug.h"
 
 
 static	bool						gPreflighted = 0;
 static	bool						gDebugEnabled = 1;
-static	int							gOutputFileNo = 0;
+#if ! _WIN32
+	static	int						gOutputFileNo = 0;
+#endif // ! _WIN32
 static	FILE *						gOutputFILE = NULL;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 
-static	pthread_mutex_t				gMutex = PTHREAD_MUTEX_INITIALIZER;
-static	pthread_t					gMutexThread = NULL;
-static	int							gMutexRecurse = 0;
+#if _WIN32
+	static	INIT_ONCE				gInitOnce = INIT_ONCE_STATIC_INIT; 
+	static	CRITICAL_SECTION		gCriticalSection;
+#else
+	static	pthread_mutex_t			gMutex = PTHREAD_MUTEX_INITIALIZER;
+	static	pthread_t				gMutexThread = NULL;
+	static	int						gMutexRecurse = 0;
+#endif // _WIN32
+
+#if _WIN32
+static BOOL CALLBACK PrepareCriticalSection(PINIT_ONCE once, PVOID param, PVOID *context)
+{
+	InitializeCriticalSection(&gCriticalSection);
+	return TRUE;
+}
+#endif // _WIN32
 
 static void _DebugEnter()
 {
+#if _WIN32
+	InitOnceExecuteOnce(&gInitOnce, PrepareCriticalSection, NULL, NULL);
+	EnterCriticalSection(&gCriticalSection);
+#else
 	if (!pthread_equal(gMutexThread, pthread_self()))
 		pthread_mutex_lock(&gMutex);
 	gMutexThread = pthread_self();
 	gMutexRecurse++;
+#endif // _WIN32
 }
 
 static void _DebugLeave()
 {
+#if _WIN32
+	LeaveCriticalSection(&gCriticalSection);
+#else
 	if (!--gMutexRecurse) 
 	{
 		gMutexThread = NULL;
 		pthread_mutex_unlock(&gMutex);
 	}
+#endif // _WIN32
 }
 
 static char *_DebugShortenPath(char *path)
 {
 	char *mark1 = strrchr(path, '@');
+
+	// Check whether this looks like the separator between message and path
+#if _WIN32
+	if (mark1 && (mark1 != path) && (mark1[-1] == ' ') && (mark1[1] == ' '))
+#else
 	if (mark1 && ! strncmp(mark1, "@ /", 3))
+#endif // _WIN32
 	{
+		// Slide the file name and delimiter forward in the editable buffer
+#if _WIN32
+		char *mark2 = strrchr(path, '\\');
+#else
 		char *mark2 = strrchr(path, '/');
+#endif // _WIN32
 		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
 	}
-	
+
 	return path;
 }
 
@@ -97,18 +135,33 @@ void DebugPreflight(char *logname, int redirect, int level)
 	
 	if (!gOutputFILE)
 		gOutputFILE = stderr;
+#if ! _WIN32
 	if (!gOutputFileNo)
 		gOutputFileNo = STDERR_FILENO;
+#endif // ! _WIN32
 	
 	if (logname && *logname)
 	{
+#if _WIN32
+		char	buffer[MAX_PATH+1] = {0};
+#else
 		char	buffer[PATH_MAX+1] = {0};
+#endif // _WIN32
 
 		// If we've preflighted already, close the previous log
 		if (gPreflighted)
 			DebugPostflight();
 	
 		// Determine where the log file will go
+#if _WIN32
+		if ((logname[0] != '\\') &&
+				((logname[0] < 'A') || (logname[0] > 'Z') || (logname[1] != ':') || (logname[2] != '\\')) &&
+				((logname[0] < 'a') || (logname[0] > 'z') || (logname[1] != ':') || (logname[2] != '\\')))
+		{
+			if (! SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer))
+				strncat(buffer, "\\", sizeof(buffer)-1); // Path separator
+		}
+#else
 		if (*logname != '/')
 		{
 			const char * home = getenv("HOME");
@@ -125,6 +178,7 @@ void DebugPreflight(char *logname, int redirect, int level)
 				mkdir(buffer, 0700);
 			}
 		}
+#endif // ! _WIN32
 		strncat(buffer, logname, sizeof(buffer)-1);
 		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
 			strncat(buffer, ".log", sizeof(buffer)-1);
@@ -136,19 +190,25 @@ void DebugPreflight(char *logname, int redirect, int level)
 		// Open a new file and use it's file descriptor for our logging
 		if (! (gOutputFILE = fopen(buffer, "a")))
 			goto CLEANUP;
+#if ! _WIN32
 		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
 		gOutputFileNo = fileno(gOutputFILE);
 		fchmod(gOutputFileNo, S_IRWXU | S_IRWXG | S_IRWXO);
+#endif // ! _WIN32
 	}
 	
 	if (!gPreflighted)
 	{
 		time_t		now;
-		char		stamp[24] = "";
+		char		stamp[64] = "";
 
 		// Print a pretty header
 		time(&now);
+#if _WIN32
+		ctime_s(stamp, sizeof(stamp), &now);
+#else
 		ctime_r(&now, stamp);
+#endif // _WIN32
 		strtok(stamp, "\n");
 		fprintf(gOutputFILE, "--- Log opened %s ---\n", stamp);
 
@@ -172,11 +232,15 @@ void DebugPostflight()
 	if (gPreflighted)
 	{
 		time_t		now;
-		char		stamp[26] = "";
+		char		stamp[64] = "";
 
 		// Print a pretty trailer
 		time(&now);
+#if _WIN32
+		ctime_s(stamp, sizeof(stamp), &now);
+#else
 		ctime_r(&now, stamp);
+#endif // _WIN32
 		strtok(stamp, "\n");
 		fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
 
@@ -187,24 +251,26 @@ void DebugPostflight()
 	{
 		fclose(gOutputFILE);
 		gOutputFILE = stderr;
+#if ! _WIN32
 		gOutputFileNo = STDERR_FILENO;
+#endif // ! _WIN32
 	}
+#if ! _WIN32
 	else if (gOutputFileNo)
 	{
 		close(gOutputFileNo);
 		gOutputFileNo = STDERR_FILENO;
 	}
-	
+#endif // ! _WIN32
+
 	_DebugLeave();
 }
 
 void DebugMessage(int level, const char *format, ...)
 {
-	va_list			args;
-	size_t			bytes;
-#if DEBUG_SHORTEN_PATHS
 	char *			buffer = NULL;
-#endif // DEBUG_SHORTEN_PATHS
+	size_t			length;
+	va_list			args;
 	
 	if (gDebugEnabled)
 	{
@@ -212,23 +278,33 @@ void DebugMessage(int level, const char *format, ...)
 		if (!gPreflighted)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR);
 		
-		// Print out the requested message
-		va_start(args, format);
 #if DEBUG_SHORTEN_PATHS
-		if (vasprintf(&buffer, format, args) >= 0)
+		// Format the message into an editable buffer
+		va_start(args, format);
+		length = vsnprintf(NULL, 0, format, args);
+		if ((buffer = calloc(1, length + 1)))
+			vsnprintf(buffer, length + 1, format, args);
+		va_end(args);
+		
+		if (buffer)
 		{
-			fprintf(gOutputFILE, "%s", _DebugShortenPath(buffer));
+			// Remove the leading path components and print the result
+			fprintf(gOutputFILE, "%s\n", _DebugShortenPath(buffer));
 			free(buffer);
 		}
 		else
 #endif // DEBUG_SHORTEN_PATHS
-		vfprintf(gOutputFILE, format, args);
-		va_end(args);
-		
-		// Append a trailing linefeed if necessary
-		bytes = strlen(format);
-		if (bytes && (format[bytes-1] != '\n'))
-			fprintf(gOutputFILE, "\n");
+		{
+			// Print the message exactly as formatted
+			va_start(args, format);
+			vfprintf(gOutputFILE, format, args);
+			va_end(args);
+
+			// Append a trailing linefeed if necessary
+			length = strlen(format);
+			if (length && (format[length-1] != '\n'))
+				fprintf(gOutputFILE, "\n");
+		}
 			
 		_DebugLeave();
 	}
@@ -311,14 +387,12 @@ int DebugLevel(void)
 		if (gDebugLevel == 1)
 		{
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			if (level)
-			{
-				int value = strtol(level, NULL, 10);
-				if (value <= 0)
-					gDebugLevel = value, gDebugMask = 0;
-				else
-					gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
-			}
+			int value = (level) ? strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
+
+			if (value <= 0)
+				gDebugLevel = value, gDebugMask = 0;
+			else
+				gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
 		}
 		
 		_DebugLeave();

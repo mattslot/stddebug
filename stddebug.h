@@ -1,7 +1,7 @@
 /*!
 	@file stddebug.h
 	@abstract Common debugging macros
-	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -45,6 +45,11 @@
 #if defined(__arm__)
 	#include <unistd.h>			// For getpid
 #endif
+
+// Compatibility with MSVC _DEBUG
+#if _DEBUG && ! defined(DEBUG)
+	#define DEBUG _DEBUG
+#endif // _DEBUG && ! DEBUG
 
 // Preprocessor magic to convert integers to strings
 #define __MKSTR__(x)			__MKVAL__(x)
@@ -117,7 +122,11 @@
 	#else
 		#error Architecture not supported
 	#endif /* __ppc__ || __ppc64__ */
-  #endif /* TARGET_OS_IPHONE */
+  #elif _WIN32
+		#define DEBUGGER()	__debugbreak()
+  #else
+	#error "Platform not supported"
+  #endif /* __GNUC__ */
 
 #else
 
@@ -131,6 +140,10 @@
 
 #endif // DEBUG
 
+#if defined(_MSC_VER)
+	// MSVC does not support the __typeof() operator, but it does support auto
+	#define __typeof(t)		auto
+#endif // _MSC_VER
 
 #if DEBUG || VERBOSE
 
@@ -180,7 +193,7 @@
 	#define	dLogIfNSException(check,level,message,...)					do { @try { check; } @catch(NSException *_exception_) { \
 																			dLogMessage(level, "Exception '%@' -- " message, [_exception_ reason], ## __VA_ARGS__); } } while(0)
 	#define	dFailIfNSException(check,action,level,message,...)			do { @try { check; } @catch(NSException *_exception_) { \
-																			dLogMessage(level, "Exception '%@' -- " message, [_exception_ reason], ## __VA_ARGS__); DEBUGGER(); action; goto CLEANUP; } } while(0)
+																			dLogMessage(level, "Exception '%@' -- " message, [_exception_ reason], ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
 	#define	dAssertIfNSException(check,message,...)						do { @try { check; } @catch(NSException *_exception_) { \
 																			dAssertionFailure("Exception '%@' -- " message, [_exception_ reason], ## __VA_ARGS__); } } while(0)
 

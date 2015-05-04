@@ -1,7 +1,7 @@
 /*!
 	@file testapp.c
 	@abstract Common debugging macros
-	@copyright (c) 1997-2014 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -47,10 +47,11 @@ int main(int argc, char **argv)
 	
 	// Optional call to set up the logfile. By default, only messages at level
 	// ERROR or higher will be logged, so we lower the logging level to DEBUG.
+	// Pass NULL for the logfile to write error messages to stderr / console.
 	DebugPreflight("testapp", 0, DEBUG_LEVEL_DEBUG);
 	
 	// Log a short message, no change to application flow.
-	dLog(DEBUG_LEVEL_DEBUG, "Hello stddebug");
+	dLog(DEBUG_LEVEL_ALWAYS, "Hello stddebug");
 	
 	// Perform a simple memory allocation, and jump to CLEANUP if it fails.
 	dFailIfNull(buffer = calloc(1, 1), 
