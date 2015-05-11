@@ -129,7 +129,7 @@ void DebugMessage(int level, const char *format, ...)
 
 		// Format the message into an editable buffer
 		va_start(args, format);
-		length = vsnprintf_s(NULL, 0, 0, format, args);
+		length = _vscprintf(format, args);
 		if ((buffer = calloc(1, length + strlen("\r\n") + 1)))
 			vsnprintf_s(buffer, length + 1, length + 1, format, args);
 		va_end(args);
