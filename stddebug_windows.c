@@ -244,7 +244,7 @@ int DebugLevel(void)
 			int value = DEBUG_LEVEL_FAILURE;
 
 			_dupenv_s(&level, NULL, DEBUG_LEVEL_ENV_VAR);
-			if (level) value = strtol(level, NULL, 10);
+			if (level) value = (int)strtol(level, NULL, 10);
 			
 			if (level && (value <= 0))
 				gDebugLevel = value, gDebugMask = 0;

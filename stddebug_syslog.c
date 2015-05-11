@@ -286,7 +286,7 @@ int DebugLevel(void)
 		if (gDebugLevel == 1)
 		{
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			int value = (level) ? strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
+			int value = (level) ? (int)strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
 
 			if (value <= 0)
 				gDebugLevel = value, gDebugMask = 0;
