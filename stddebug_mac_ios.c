@@ -100,7 +100,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(char *logname, int redirect, int level)
+void DebugPreflight(const char *logname, int redirect, int level)
 {
 	_DebugEnter();
 	

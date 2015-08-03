@@ -112,7 +112,7 @@ static int _DebugLevelToSyslogPriority(int level)
 	return LOG_INFO;
 }
 
-void DebugPreflight(char *logname, int redirect, int level)
+void DebugPreflight(const char *logname, int redirect, int level)
 {
 	_DebugEnter();
 	

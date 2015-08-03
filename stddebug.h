@@ -223,7 +223,7 @@ extern "C" {
 		
 		This function is typically called once at the beginning of your application.
 */
-extern void DebugPreflight(char *logname, int redirect, int level);
+extern void DebugPreflight(const char *logname, int redirect, int level);
 
 /*!
 	@abstract Log debug messages to the console or logfile.
