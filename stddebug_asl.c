@@ -124,13 +124,10 @@ void DebugPreflight(const char *logname, int redirect, int level)
 	
 		// Determine where the log file will go
 		if (*logname != '/')
-		{
-			strcpy(buffer, /* geteuid() ? getenv("HOME") : */ "/var/log");
-			strcat(buffer, "/");
-		}
-		strcat(buffer, logname);
+			strcpy(buffer, "/var/log/");
+		strncat(buffer, logname, sizeof(buffer)-strlen(buffer)-1);
 		if (strstr(logname, ".log") == NULL)
-			strcat(buffer, ".log");
+			strncat(buffer, ".log", sizeof(buffer)-strlen(buffer)-1);
 	
 		// Open a new file and use it's file descriptor for our logging
 		if (! (gOutputFILE = fopen(buffer, "a")))
