@@ -143,9 +143,9 @@ void DebugPreflight(const char *logname, int redirect, int level)
 	if (logname && *logname)
 	{
 #if _WIN32
-		char	buffer[MAX_PATH+1] = {0};
+		char	buffer[MAX_PATH*2+1] = {0};
 #else
-		char	buffer[PATH_MAX+1] = {0};
+		char	buffer[PATH_MAX*2+1] = {0};
 #endif // _WIN32
 
 		// If we've preflighted already, close the previous log
@@ -187,14 +187,27 @@ void DebugPreflight(const char *logname, int redirect, int level)
 		if (gOutputFILE && (gOutputFILE != stderr))
 			fclose(gOutputFILE);
 	
-		// Open a new file and use it's file descriptor for our logging
-		if (! (gOutputFILE = fopen(buffer, "a")))
-			goto CLEANUP;
+#if _WIN32
+		if ((strlen(buffer) <= MAX_PATH) && (gOutputFILE = fopen(buffer, "a")))
+#else
+		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
+#endif // _WIN32
+		{
+			// Open a new file and use it's file descriptor for our logging
 #if ! _WIN32
-		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-		gOutputFileNo = fileno(gOutputFILE);
-		fchmod(gOutputFileNo, S_IRWXU | S_IRWXG | S_IRWXO);
+			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
+			gOutputFileNo = fileno(gOutputFILE);
+			fchmod(gOutputFileNo, S_IRWXU | S_IRWXG | S_IRWXO);
 #endif // ! _WIN32
+		}
+		else
+		{
+			// Default back to stderr
+			gOutputFILE = stderr;
+#if ! _WIN32
+			gOutputFileNo = STDERR_FILENO;
+#endif // ! _WIN32
+		}
 	}
 	
 	if (!gPreflighted)

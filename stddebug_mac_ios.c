@@ -113,7 +113,7 @@ void DebugPreflight(const char *logname, int redirect, int level)
 #if !TARGET_OS_IPHONE
 	if (logname && *logname)
 	{
-		char	buffer[PATH_MAX+1] = {0};
+		char	buffer[PATH_MAX*2+1] = {0};
 
 		// If we've preflighted already, close the previous log
 		if (gPreflighted)
@@ -144,12 +144,19 @@ void DebugPreflight(const char *logname, int redirect, int level)
 		if (gOutputFILE && (gOutputFILE != stderr))
 			fclose(gOutputFILE);
 	
-		// Open a new file and use it's file descriptor for our logging
-		if (! (gOutputFILE = fopen(buffer, "a")))
-			goto CLEANUP;
-		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-		gOutputFileNo = fileno(gOutputFILE);
-		fchmod(gOutputFileNo, S_IRWXU | S_IRWXG | S_IRWXO);
+		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
+		{
+			// Open a new file and use it's file descriptor for our logging
+			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
+			gOutputFileNo = fileno(gOutputFILE);
+			fchmod(gOutputFileNo, S_IRWXU | S_IRWXG | S_IRWXO);
+		}
+		else
+		{
+			// Default back to stderr
+			gOutputFILE = stderr;
+			gOutputFileNo = STDERR_FILENO;
+		}
 	}
 #endif // !TARGET_OS_IPHONE
 	
