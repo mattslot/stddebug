@@ -159,7 +159,7 @@ void DebugPreflight(const char *logname, int redirect, int level)
 				((logname[0] < 'a') || (logname[0] > 'z') || (logname[1] != ':') || (logname[2] != '\\')))
 		{
 			if (! SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer))
-				strncat(buffer, "\\", sizeof(buffer)-1); // Path separator
+				strncat(buffer, "\\", sizeof(buffer)-strlen(buffer)-1); // Path separator
 		}
 #else
 		if (*logname != '/')
@@ -179,9 +179,9 @@ void DebugPreflight(const char *logname, int redirect, int level)
 			}
 		}
 #endif // ! _WIN32
-		strncat(buffer, logname, sizeof(buffer)-1);
+		strncat(buffer, logname, sizeof(buffer)-strlen(buffer)-1);
 		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
-			strncat(buffer, ".log", sizeof(buffer)-1);
+			strncat(buffer, ".log", sizeof(buffer)-strlen(buffer)-1);
 		
 		// Close the previous file
 		if (gOutputFILE && (gOutputFILE != stderr))

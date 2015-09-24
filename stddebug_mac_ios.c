@@ -136,9 +136,9 @@ void DebugPreflight(const char *logname, int redirect, int level)
 				mkdir(buffer, 0700);
 			}
 		}
-		strncat(buffer, logname, sizeof(buffer)-1);
+		strncat(buffer, logname, sizeof(buffer)-strlen(buffer)-1);
 		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
-			strncat(buffer, ".log", sizeof(buffer)-1);
+			strncat(buffer, ".log", sizeof(buffer)-strlen(buffer)-1);
 		
 		// Close the previous file
 		if (gOutputFILE && (gOutputFILE != stderr))
