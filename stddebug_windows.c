@@ -119,6 +119,7 @@ void DebugMessage(int level, const char *format, ...)
 {
 	char *			buffer = NULL;
 	size_t			length;
+	size_t			bytes;
 	va_list			args;
 	
 	if (gDebugEnabled)
@@ -130,7 +131,8 @@ void DebugMessage(int level, const char *format, ...)
 		// Format the message into an editable buffer
 		va_start(args, format);
 		length = _vscprintf(format, args);
-		if ((buffer = calloc(1, length + strlen("\r\n") + 1)))
+		bytes = length + strlen("\r\n") + 1;
+		if ((buffer = calloc(1, bytes)))
 			vsnprintf_s(buffer, length + 1, length + 1, format, args);
 		va_end(args);
 		
@@ -144,7 +146,7 @@ void DebugMessage(int level, const char *format, ...)
 			// Append a trailing linefeed if necessary
 			length = strlen(format);
 			if (length && (format[length-1] != '\r') && (format[length-1] != '\n'))
-				strcat_s(buffer, sizeof(buffer), "\r\n");
+				strcat_s(buffer, bytes, "\r\n");
 
 			// Print and release the string buffer
 			OutputDebugString(buffer);
