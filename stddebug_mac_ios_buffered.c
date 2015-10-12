@@ -85,15 +85,39 @@ static void _DebugLeave()
 static void _DebugPrintf(const CFStringRef format, ...)
 {
 	va_list			args;
+	CFStringRef		cfstr = NULL;
 
 	if (!gOutputBuffer)
 		gOutputBuffer = CFStringCreateMutable(NULL, 0);
 	
-	if (gOutputBuffer)
+	va_start(args, format);
+	cfstr = CFStringCreateWithFormatAndArguments(NULL, NULL, format, args);
+	va_end(args);
+
+	if (cfstr)
 	{
-		va_start(args, format);
-		CFStringAppendFormatAndArguments(gOutputBuffer, NULL, format, args);
-		va_end(args);
+#if TARGET_IPHONE_SIMULATOR
+		char *		buffer = NULL;
+		size_t		length;
+
+		if ((buffer = (char *)CFStringGetCStringPtr(cfstr, kCFStringEncodingUTF8)))
+			fprintf(stderr, "%s", buffer);
+		else
+		{
+			length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfstr), kCFStringEncodingUTF8);
+			buffer = calloc(sizeof(char), length + 1);
+	
+			if (buffer && CFStringGetCString(cfstr, buffer, length + 1, kCFStringEncodingUTF8))
+				fprintf(stderr, "%s", buffer);
+
+			free(buffer);
+		}
+#endif // TARGET_IPHONE_SIMULATOR
+
+		if (gOutputBuffer)
+			CFStringAppend(gOutputBuffer, cfstr);
+	
+		CFRelease(cfstr);
 	}
 }
 
