@@ -222,7 +222,7 @@ void DebugData(const char *label, const void *data, size_t length)
 
 void SetDebugEnabled(int enable)
 {
-	gDebugEnabled = (enable) ? true : false;
+	gDebugEnabled = (enable) ? TRUE : FALSE;
 }
 
 void SetDebugLevel(int level)
