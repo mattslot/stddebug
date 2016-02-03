@@ -72,8 +72,9 @@ static char *_DebugShortenPath(char *path)
 	// Check whether this looks like the separator between message and path
 	if (mark1 && (mark1 != path) && (mark1[-1] == ' ') && (mark1[1] == ' '))
 	{
-		char *mark2 = strrchr(path, '\\');
-		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
+		char *mark2 = strrchr(mark1, '\\');
+		if (mark2)
+			memmove(mark1 + 2, mark2 + 1, strlen(mark2));
 	}
 	
 	return path;

@@ -119,11 +119,12 @@ static char *_DebugShortenPath(char *path)
 	{
 		// Slide the file name and delimiter forward in the editable buffer
 #if _WIN32
-		char *mark2 = strrchr(path, '\\');
+		char *mark2 = strrchr(mark1, '\\');
 #else
 		char *mark2 = strrchr(path, '/');
 #endif // _WIN32
-		memmove(mark1 + 2, mark2 + 1, strlen(mark2));
+		if (mark2)
+			memmove(mark1 + 2, mark2 + 1, strlen(mark2));
 	}
 
 	return path;
