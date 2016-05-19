@@ -40,7 +40,14 @@
 	#include <sys/types.h>		// For size_t
 #endif
 
-#include <stdlib.h>				// For abort
+#if KEXT
+	#include <kern/debug.h>
+	#include <sys/types.h>
+	#include <sys/malloc.h>
+	#include <IOKit/IOLib.h>	// For kprintf
+#else
+	#include <stdlib.h>			// For abort
+#endif
 
 #if defined(__arm__)
 	#include <unistd.h>			// For getpid
@@ -78,7 +85,7 @@
 #define DEBUG_LEVEL_ENV_VAR		"DEBUG_LEVEL"
 
 // Broken out so headerdoc doesn't include it
-#if TARGET_OS_MAC || TARGET_OS_IPHONE
+#if ! KEXT && ( TARGET_OS_MAC || TARGET_OS_IPHONE )
 
 	#include <CoreFoundation/CFString.h>
 
@@ -199,6 +206,27 @@
 
 #endif // __OBJC__
 
+
+#if KEXT
+
+  #if defined(MODULE_NAME)
+	#define __PREFIX__		__MKSTR__(MODULE_NAME) " "
+  #else
+	#define __PREFIX__		""
+  #endif // MODULE_NAME
+
+  #if DEBUG || VERBOSE
+	#define dPanic(m,...)									do { panic_plain(__PREFIX__  "PANIC: " m __WHERE__ "\n", ## __VA_ARGS__); } while(0)
+  #else
+	#define dPanic(m,...)									do { kprintf(__PREFIX__ "PANIC: "      m __WHERE__ "\n", ## __VA_ARGS__); } while(0)
+  #endif // DEBUG
+
+	#define dPanicIfError(check,message,...)				do { __typeof(check) __ERROR__ = (check); if (__ERROR__) dPanic(message, ## __VA_ARGS__); } while(0)
+	#define dPanicIfTrue(check,message,...)					do { if ((check)) dPanic(message, ## __VA_ARGS__); } while(0)
+	#define dPanicIfFalse(check,message,...)				do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
+	#define dPanicIfNull(check,message,...)					do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
+
+#endif // KEXT
 
 #ifdef __cplusplus
 extern "C" {
