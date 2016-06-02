@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 	// Optional call to set up the logfile. By default, only messages at level
 	// ERROR or higher will be logged, so we lower the logging level to DEBUG.
 	// Pass NULL for the logfile to write error messages to stderr / console.
-	DebugPreflight("testapp", 0, DEBUG_LEVEL_DEBUG);
+	DebugPreflight("testapp", 0, DEBUG_LEVEL_DEBUG, 0);
 	
 	// Log a short message, no change to application flow.
 	dLog(DEBUG_LEVEL_ALWAYS, "Hello stddebug");

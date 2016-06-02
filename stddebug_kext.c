@@ -56,7 +56,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, int redirect, int level)
+void DebugPreflight(const char *logname, int redirect, int level, int perms)
 {
 	if (gDebugLevel == 1)
 		SetDebugLevel(level);

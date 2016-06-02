@@ -245,13 +245,14 @@ extern "C" {
 	@param logname Name of the new logfile to use, or NULL to leave the same.
 	@param redirect true to redirect stderr entirely, false to just log our own data.
 	@param level Set to the default logging level, unless overridden by setenv.
+	@param perms Specify the UNIX file permissions. Pass 0 to use defaults.
 	@discussion
 		Prepare for logging by opening the indicated file and redirecting stderr
 		to the same location. Print a timestamped header to the output.
 		
 		This function is typically called once at the beginning of your application.
 */
-extern void DebugPreflight(const char *logname, int redirect, int level);
+extern void DebugPreflight(const char *logname, int redirect, int level, int perms);
 
 /*!
 	@abstract Log debug messages to the console or logfile.

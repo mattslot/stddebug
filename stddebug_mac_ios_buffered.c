@@ -133,7 +133,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, int redirect, int level)
+void DebugPreflight(const char *logname, int redirect, int level, int perms)
 {
 	_DebugEnter();
 	
@@ -224,7 +224,7 @@ void DebugMessage(int level, CFStringRef format, ...)
 	{
 		_DebugEnter();
 		if (!gPreflighted)
-			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR);
+			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
 		
 		// Format the string, accepting %@ qualifier for CFType/NSObject
 		va_start(args, format);
@@ -314,7 +314,7 @@ void DebugData(const char *label, const void *data, size_t length)
 		
 		_DebugEnter();
 		if (!gPreflighted)
-			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR);
+			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
 		
 		// Now that we have the data, print out the label and our buffer
 		_DebugPrintf(CFSTR("%s (%lu bytes):\n%s"), label, length, 
