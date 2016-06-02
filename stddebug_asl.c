@@ -134,7 +134,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 			goto CLEANUP;
 		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
 		gOutputFileNo = fileno(gOutputFILE);
-		fchmod(gOutputFileNo, (perms) ? perms : 0700);
+		fchmod(gOutputFileNo, (perms) ? perms : 0600);
 	}
 	
 	if (!gPreflighted)

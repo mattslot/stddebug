@@ -149,7 +149,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 			// Open a new file and use it's file descriptor for our logging
 			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
 			gOutputFileNo = fileno(gOutputFILE);
-			fchmod(gOutputFileNo, (perms) ? perms : 0700);
+			fchmod(gOutputFileNo, (perms) ? perms : 0600);
 		}
 		else
 		{
