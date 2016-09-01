@@ -1,7 +1,7 @@
 /*!
 	@file stddebug.h
 	@abstract Common debugging macros
-	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2016 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
@@ -21,12 +21,30 @@
 	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 	DEALINGS IN THE SOFTWARE.
 
+	@indexgroup	stdebug
 
 	@discussion
 		This header defines a series of macros used to wrap function calls, test
 		for failure, log the details, and optionally modify program flow. Also
 		declares the logging bottlenecks that redirct error messages to stderr
 		or an application-specified logfile.
+		
+		There are 3 broad groups of macros:
+		
+		• dLogIf...() :
+		
+			Evaluates an expression or function and logs a formatted message.
+		
+		• dFailIf...() :
+		
+			Evaluates an expression or function and logs a formatted message.
+			It then performs an optional side-effect, and then goto CLEANUP
+		
+		• dAssertIf...() :
+		
+			In Debug builds, evaluates the expression and calls abort().
+			In Release builds, entire expression is optimized out.
+			
 */
 
 #ifndef __STANDARD_DEBUG_HEADER__
