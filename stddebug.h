@@ -330,7 +330,7 @@ extern int DebugLevel(void);
 
 /*!
 	@abstract Specify that modules that will be logged during debugging.
-	@param level A bitmask constant indicating which operations should be logged.
+	@param mask A bitmask constant indicating which operations should be logged.
 	@discussion
 		The application can change the debugging mask on the fly in response to
 		user configuration. This setting is shared across the entire application.
