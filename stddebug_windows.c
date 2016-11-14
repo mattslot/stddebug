@@ -204,7 +204,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 		
 		// Now that we have the data, print out the label and our buffer
-		i = _snprintf(hex, 0, "%s (%lu bytes):\r\n%s", label, length, 
+		i = _scprintf("%s (%lu bytes):\r\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\r\n");
 		if ((output = (char *) malloc(i+1)))
 		{
