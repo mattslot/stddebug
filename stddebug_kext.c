@@ -44,6 +44,22 @@ static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 
+// strrchr is not implemented for kexts
+static char * strrchr(const char *string, char c)
+{
+	char *result = (char *)NULL;
+
+	while(1)
+	{
+		if (*string == c)
+			result = (char *)string;
+		if (*string++ == 0)
+			break;
+	}
+
+	return result;
+}
+
 static char *_DebugShortenPath(char *path)
 {
 	char *mark1 = strrchr(path, '@');
@@ -175,7 +191,19 @@ int DebugMask(void)
 	return gDebugMask;
 }
 
+int DebugShouldLog(int value)
+{
+	int shouldLog = 0;
+	
+	if (value < 0)
+		shouldLog = (DebugLevel() <= value) ? 1 : 0;
+	else 
+		shouldLog = (DebugMask() & value) ? 1 : 0;
+	
+	return shouldLog;
+}
+
 char * CopyDebugHistory()
 {
-	return nil;
+	return NULL;
 }
