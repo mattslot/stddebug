@@ -51,6 +51,7 @@ static	bool						gPreflighted = 0;
 static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
+static	bool						gDebugStamp = false;
 
 static	pthread_mutex_t				gMutex = PTHREAD_MUTEX_INITIALIZER;
 static	pthread_t					gMutexThread = NULL;
@@ -180,9 +181,8 @@ void DebugMessage(int level, const char *format, ...)
 {
 	va_list			args;
 	size_t			bytes;
-#if DEBUG_SHORTEN_PATHS
+	char			stamp[24] = "";
 	char *			buffer = NULL;
-#endif // DEBUG_SHORTEN_PATHS
 	
 	if (gDebugEnabled)
 	{
@@ -192,18 +192,33 @@ void DebugMessage(int level, const char *format, ...)
 		if (!gPreflighted)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
 		
-		// Print out the requested message
-		va_start(args, format);
-#if DEBUG_SHORTEN_PATHS
-		if (vasprintf(&buffer, format, args) >= 0)
+		// Optionally prefix the entry with a timestamp
+		if (gDebugStamp)
 		{
-			syslog(priority, "%s", _DebugShortenPath(buffer));
+			struct tm	ltime;
+			time_t		now = time(NULL);
+
+			strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
+		}
+
+		// Format the message into an editable buffer
+		va_start(args, format);
+		length = vsnprintf(NULL, 0, format, args);
+		if ((buffer = calloc(1, length + 1)))
+			vsnprintf(buffer, length + 1, format, args);
+		va_end(args);
+
+		if (buffer)
+		{
+#if DEBUG_SHORTEN_PATHS
+			// Remove the leading path components in the buffer
+			_DebugShortenPath(buffer);
+#endif // DEBUG_SHORTEN_PATHS
+
+			// Print out the requested message
+			syslog(priority, "%s%s", stamp, buffer);
 			free(buffer);
 		}
-		else
-#endif // DEBUG_SHORTEN_PATHS
-		vsyslog(priority, format, args);
-		va_end(args);
 			
 		_DebugLeave();
 	}
@@ -266,6 +281,16 @@ void DebugData(const char *label, const void *data, size_t length)
 void SetDebugEnabled(int enable)
 {
 	gDebugEnabled = (enable) ? true : false;
+}
+
+void SetDebugTimestamp(bool showTimestamp)
+{
+	gDebugStamp = showTimestamp;
+}
+
+bool DebugTimestamp()
+{
+	return gDebugStamp;
 }
 
 void SetDebugLevel(int level)

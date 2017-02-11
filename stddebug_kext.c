@@ -167,6 +167,16 @@ void SetDebugEnabled(int enable)
 	gDebugEnabled = (enable) ? true : false;
 }
 
+void SetDebugTimestamp(bool showTimestamp)
+{
+	; // Ignored
+}
+
+bool DebugTimestamp()
+{
+	return false;
+}
+
 void SetDebugLevel(int level)
 {
 	if (level > DEBUG_LEVEL_NONE)

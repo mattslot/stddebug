@@ -66,6 +66,7 @@ static	int							gOutputFileNo = 0;
 static	FILE *						gOutputFILE = NULL;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
+static	bool						gDebugStamp = 0;
 
 static	pthread_mutex_t				gMutex = PTHREAD_MUTEX_INITIALIZER;
 static	pthread_t					gMutexThread = NULL;
@@ -286,14 +287,29 @@ void DebugMessage(int level, __DEBUGSTR_ARG__ format, ...)
 				}
 			}
 		}
-
-		// Print out the requested message
-		if (cstr) fprintf(gOutputFILE, "%s", cstr);
 		
-		// Append a trailing linefeed if necessary
-		index = CFStringGetLength(format);
-		if (index && (CFStringGetCharacterAtIndex(format,index-1) != '\n'))
-			fprintf(gOutputFILE, "\n");
+		if (cstr)
+		{
+			char			stamp[24] = "";
+			const char *	eol = "";
+
+			// Optionally prefix the entry with a timestamp
+			if (gDebugStamp)
+			{
+				struct tm	ltime;
+				time_t		now = time(NULL);
+
+				strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
+			}
+		
+			// Append a trailing linefeed if necessary
+			index = CFStringGetLength(format);
+			if (index && (CFStringGetCharacterAtIndex(format,index-1) != '\n'))
+				eol = "\n";
+
+			// Print out the requested message
+			fprintf(gOutputFILE, "%s%s%s", stamp, cstr, eol);
+		}
 			
 		_DebugLeave();
 
@@ -360,6 +376,16 @@ void DebugData(const char *label, const void *data, size_t length)
 void SetDebugEnabled(int enable)
 {
 	gDebugEnabled = (enable) ? true : false;
+}
+
+void SetDebugTimestamp(bool showTimestamp)
+{
+	gDebugStamp = showTimestamp;
+}
+
+bool DebugTimestamp()
+{
+	return gDebugStamp;
 }
 
 void SetDebugLevel(int level)

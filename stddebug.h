@@ -310,6 +310,18 @@ extern void DebugPostflight(void);
 extern void SetDebugEnabled(int enable);
 
 /*!
+	@abstract Specify that timestamps that will be logged during debugging.
+	@param showTimestamp true to prefix debug messages with timestamps.
+*/
+extern void SetDebugTimestamp(bool showTimestamp);
+
+/*!
+	@abstract Return the current debug timestamp setting.
+	@result true if timestamps are enable for debug messages.
+*/
+extern bool DebugTimestamp(void);
+
+/*!
 	@abstract Specify how much data will be logged during debugging.
 	@param level A DEBUG_LEVEL_* constant indicating the new logging level.
 	@discussion

@@ -62,6 +62,7 @@ static	bool						gDebugEnabled = 1;
 static	FILE *						gOutputFILE = NULL;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
+static	bool						gDebugStamp = 0;
 
 #if _WIN32
 	static	INIT_ONCE				gInitOnce = INIT_ONCE_STATIC_INIT; 
@@ -282,6 +283,8 @@ void DebugPostflight()
 
 void DebugMessage(int level, const char *format, ...)
 {
+	const char *	eol = "";
+	char			stamp[24] = "";
 	char *			buffer = NULL;
 	size_t			length;
 	va_list			args;
@@ -291,8 +294,16 @@ void DebugMessage(int level, const char *format, ...)
 		_DebugEnter();
 		if (!gPreflighted)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
+
+		// Optionally prefix the entry with a timestamp
+		if (gDebugStamp)
+		{
+			struct tm	ltime;
+			time_t		now = time(NULL);
+
+			strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
+		}
 		
-#if DEBUG_SHORTEN_PATHS
 		// Format the message into an editable buffer
 		va_start(args, format);
 		length = vsnprintf(NULL, 0, format, args);
@@ -302,22 +313,19 @@ void DebugMessage(int level, const char *format, ...)
 		
 		if (buffer)
 		{
-			// Remove the leading path components and print the result
-			fprintf(gOutputFILE, "%s\n", _DebugShortenPath(buffer));
-			free(buffer);
-		}
-		else
+#if DEBUG_SHORTEN_PATHS
+			// Remove the leading path components in the buffer
+			_DebugShortenPath(buffer);
 #endif // DEBUG_SHORTEN_PATHS
-		{
-			// Print the message exactly as formatted
-			va_start(args, format);
-			vfprintf(gOutputFILE, format, args);
-			va_end(args);
 
 			// Append a trailing linefeed if necessary
-			length = strlen(format);
-			if (length && (format[length-1] != '\n'))
-				fprintf(gOutputFILE, "\n");
+			length = strlen(buffer);
+			if (length && (buffer[length-1] != '\n'))
+				eol = "\n";
+
+			// Print out the requested message
+			fprintf(gOutputFILE, "%s%s%s", stamp, buffer, eol);
+			free(buffer);
 		}
 			
 		_DebugLeave();
@@ -381,6 +389,16 @@ void DebugData(const char *label, const void *data, size_t length)
 void SetDebugEnabled(int enable)
 {
 	gDebugEnabled = (enable) ? true : false;
+}
+
+void SetDebugTimestamp(bool showTimestamp)
+{
+	gDebugStamp = showTimestamp;
+}
+
+bool DebugTimestamp()
+{
+	return gDebugStamp;
 }
 
 void SetDebugLevel(int level)

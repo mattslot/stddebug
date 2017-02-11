@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <windows.h>
 
 #include "stddebug.h"
@@ -44,6 +45,7 @@ static	BOOL						gPreflighted = 0;
 static	BOOL						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
+static	BOOL						gDebugStamp = 0;
 
 static	INIT_ONCE					gInitOnce = INIT_ONCE_STATIC_INIT; 
 static	CRITICAL_SECTION			gCriticalSection;
@@ -118,6 +120,7 @@ void DebugPostflight()
 
 void DebugMessage(int level, const char *format, ...)
 {
+	char			stamp[24] = "";
 	char *			buffer = NULL;
 	size_t			length;
 	size_t			bytes;
@@ -129,12 +132,26 @@ void DebugMessage(int level, const char *format, ...)
 		if (!gPreflighted)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 
+		// Optionally prefix the entry with a timestamp
+		if (gDebugStamp)
+		{
+			char	timebuf[12], datebuf[12];
+			
+			_strtime_s(timebuf, sizeof(timebuf));  
+			_strdate_s(datebuf, sizeof(datebuf));  
+
+			snprintf_(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
+		}
+
 		// Format the message into an editable buffer
 		va_start(args, format);
 		length = _vscprintf(format, args);
-		bytes = length + strlen("\r\n") + 1;
+		bytes = strlen(stamp) + length + strlen("\r\n") + 1;
 		if ((buffer = calloc(1, bytes)))
-			vsnprintf_s(buffer, length + 1, length + 1, format, args);
+		{
+			snprintf(buffer, bytes, "%s", stamp); // Prefix with the optional stamp
+			vsnprintf_s(buffer + strlen(buffer), length + 1, length + 1, format, args);
+		}
 		va_end(args);
 		
 		if (buffer)
@@ -224,6 +241,16 @@ void DebugData(const char *label, const void *data, size_t length)
 void SetDebugEnabled(int enable)
 {
 	gDebugEnabled = (enable) ? TRUE : FALSE;
+}
+
+void SetDebugTimestamp(bool showTimestamp)
+{
+	gDebugStamp = showTimestamp;
+}
+
+bool DebugTimestamp()
+{
+	return gDebugStamp;
 }
 
 void SetDebugLevel(int level)
