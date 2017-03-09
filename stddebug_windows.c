@@ -140,7 +140,7 @@ void DebugMessage(int level, const char *format, ...)
 			_strtime_s(timebuf, sizeof(timebuf));  
 			_strdate_s(datebuf, sizeof(datebuf));  
 
-			snprintf_(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
+			snprintf(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
 		}
 
 		// Format the message into an editable buffer
