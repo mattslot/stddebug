@@ -213,6 +213,18 @@
 #define dAssert(check,message,...)							dAssertIfFalse(check, message, ## __VA_ARGS__)
 
 
+#ifdef __cplusplus
+
+	#define	dLogIfException(check,level,message,...)					do { try { check; } catch(Exception *_exception_) { \
+																			dLogMessage(level, "Exception -- " message, ## __VA_ARGS__); } } while(0)
+	#define	dFailIfException(check,action,level,message,...)			do { try { check; } catch(Exception *_exception_) { \
+																			dLogMessage(level, "Exception -- " message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
+	#define	dAssertIfException(check,message,...)						do { try { check; } catch(Exception *_exception_) { \
+																			dAssertionFailure("Exception -- " message, ## __VA_ARGS__); } } while(0)
+
+#endif // __cplusplus
+
+
 #ifdef __OBJC__
 
 	#define	dLogIfNSException(check,level,message,...)					do { @try { check; } @catch(NSException *_exception_) { \
