@@ -64,6 +64,7 @@
 	#include <sys/malloc.h>
 	#include <IOKit/IOLib.h>	// For kprintf
 #else
+	#include <stdbool.h>
 	#include <stdlib.h>			// For abort
 #endif
 
@@ -215,11 +216,11 @@
 
 #ifdef __cplusplus
 
-	#define	dLogIfException(check,level,message,...)					do { try { check; } catch(Exception *_exception_) { \
+	#define	dLogIfException(check,level,message,...)					do { try { check; } catch(...) { \
 																			dLogMessage(level, "Exception -- " message, ## __VA_ARGS__); } } while(0)
-	#define	dFailIfException(check,action,level,message,...)			do { try { check; } catch(Exception *_exception_) { \
+	#define	dFailIfException(check,action,level,message,...)			do { try { check; } catch(...) { \
 																			dLogMessage(level, "Exception -- " message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
-	#define	dAssertIfException(check,message,...)						do { try { check; } catch(Exception *_exception_) { \
+	#define	dAssertIfException(check,message,...)						do { try { check; } catch(...) { \
 																			dAssertionFailure("Exception -- " message, ## __VA_ARGS__); } } while(0)
 
 #endif // __cplusplus

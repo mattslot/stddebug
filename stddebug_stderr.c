@@ -301,7 +301,12 @@ void DebugMessage(int level, const char *format, ...)
 			struct tm	ltime;
 			time_t		now = time(NULL);
 
-			strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
+#if PLATFORM_WINDOWS
+			localtime_s(&now, &ltime);
+#else
+			localtime_r(&now, &ltime);
+#endif // PLATFORM_WINDOWS
+			strftime(stamp, sizeof(stamp), "[%F %T] ", &ltime);
 		}
 		
 		// Format the message into an editable buffer
