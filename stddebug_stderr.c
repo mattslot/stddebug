@@ -195,12 +195,22 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
 #endif // _WIN32
 		{
-			// Open a new file and use it's file descriptor for our logging
-#if ! _WIN32
+#if _WIN32
+			// Disable buffering entirely
+			setvbuf(gOutputFILE, NULL, _IONBF, 0);
+
+			// Apply the suggested (or default) file permissions
+			_chmod(buffer, (perms) ? perms : 0600);
+#elif
+			// Enable line buffering
 			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-			gOutputFileNo = fileno(gOutputFILE);
+			
+			// Apply the suggested (or default) file permissions
 			fchmod(gOutputFileNo, (perms) ? perms : 0600);
-#endif // ! _WIN32
+
+			// Cache the file number that matches the FILE
+			gOutputFileNo = fileno(gOutputFILE);
+#endif // _WIN32
 		}
 		else
 		{
