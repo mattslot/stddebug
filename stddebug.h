@@ -63,6 +63,10 @@
 	#include <sys/types.h>
 	#include <sys/malloc.h>
 	#include <IOKit/IOLib.h>	// For kprintf
+#elif _WIN32 && NTDDI_VERSION
+	typedef int bool;
+	#define true 1
+	#define false 0
 #else
 	#include <stdbool.h>
 	#include <stdlib.h>			// For abort
@@ -72,9 +76,11 @@
 	#include <unistd.h>			// For getpid
 #endif
 
-// Compatibility with MSVC _DEBUG
+// Compatibility with MSVC _DEBUG and DBG
 #if _DEBUG && ! defined(DEBUG)
 	#define DEBUG _DEBUG
+#elif DBG && ! defined(DEBUG)
+	#define DEBUG DBG
 #endif // _DEBUG && ! DEBUG
 
 // Preprocessor magic to convert integers to strings
@@ -241,7 +247,7 @@
 #if KEXT
 
   #if defined(MODULE_NAME)
-	#define __PREFIX__		__MKSTR__(MODULE_NAME) " "
+	#define __PREFIX__		"[" __MKSTR__(MODULE_NAME) "] "
   #else
 	#define __PREFIX__		""
   #endif // MODULE_NAME
@@ -256,6 +262,14 @@
 	#define dPanicIfTrue(check,message,...)					do { if ((check)) dPanic(message, ## __VA_ARGS__); } while(0)
 	#define dPanicIfFalse(check,message,...)				do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 	#define dPanicIfNull(check,message,...)					do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
+
+#elif _WIN32 && NTDDI_VERSION
+
+  #if defined(MODULE_NAME)
+	#define __PREFIX__		"[" __MKSTR__(MODULE_NAME) "] "
+  #else
+	#define __PREFIX__		""
+  #endif // MODULE_NAME
 
 #endif // KEXT
 

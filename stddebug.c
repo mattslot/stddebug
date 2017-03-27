@@ -46,6 +46,14 @@
 		#include "stddebug_mac_ios.c"
 	#endif
 	
+#elif _WIN32
+
+	#if NTDDI_VERSION
+		#include "stddebug_windows_ntddk.c"
+	#else
+		#include "stddebug_windows.c"
+	#endif
+	
 #else
 
 	// Use POSIX APIs to output to stderr
