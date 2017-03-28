@@ -63,8 +63,8 @@
 	#include <sys/types.h>
 	#include <sys/malloc.h>
 	#include <IOKit/IOLib.h>	// For kprintf
-#elif _WIN32 && NTDDI_VERSION
-	typedef int bool;
+#elif _WIN32 && _KERNEL_MODE
+	typedef unsigned char bool;
 	#define true 1
 	#define false 0
 #else
@@ -263,7 +263,7 @@
 	#define dPanicIfFalse(check,message,...)				do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 	#define dPanicIfNull(check,message,...)					do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 
-#elif _WIN32 && NTDDI_VERSION
+#elif _WIN32 && _KERNEL_MODE
 
   #if defined(MODULE_NAME)
 	#define __PREFIX__		"[" __MKSTR__(MODULE_NAME) "] "
