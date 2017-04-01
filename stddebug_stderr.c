@@ -43,6 +43,7 @@
 #include <time.h>
 
 #if _WIN32
+	#include <io.h>
 	#include <shlobj.h>
 	#include <windows.h>
 #else
@@ -160,7 +161,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 				((logname[0] < 'A') || (logname[0] > 'Z') || (logname[1] != ':') || (logname[2] != '\\')) &&
 				((logname[0] < 'a') || (logname[0] > 'z') || (logname[1] != ':') || (logname[2] != '\\')))
 		{
-			if (! SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer))
+			if (SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer) == S_OK)
 				strncat(buffer, "\\", sizeof(buffer)-strlen(buffer)-1); // Path separator
 		}
 #else
@@ -312,7 +313,7 @@ void DebugMessage(int level, const char *format, ...)
 			time_t		now = time(NULL);
 
 #if PLATFORM_WINDOWS
-			localtime_s(&now, &ltime);
+			localtime_s(&ltime, &now);
 #else
 			localtime_r(&now, &ltime);
 #endif // PLATFORM_WINDOWS
@@ -382,9 +383,9 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
 #if __LP64__
-			k += sprintf(buffer + k, "  0x%.16lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf(buffer + k, "  0x%.16lX | %s| %s\n", (unsigned long)(uintptr_t)(bytes + i), hex, ascii);
 #else
-			k += sprintf(buffer + k, "  0x%.8lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf(buffer + k, "  0x%.8lX | %s| %s\n", (unsigned long)(uintptr_t)(bytes + i), hex, ascii);
 #endif // __LP64__
 		}
 		
