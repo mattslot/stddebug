@@ -202,7 +202,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 
 			// Apply the suggested (or default) file permissions
 			_chmod(buffer, (perms) ? perms : 0600);
-#elif
+#else
 			// Enable line buffering
 			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
 			
@@ -312,11 +312,11 @@ void DebugMessage(int level, const char *format, ...)
 			struct tm	ltime;
 			time_t		now = time(NULL);
 
-#if PLATFORM_WINDOWS
+#if _WIN32
 			localtime_s(&ltime, &now);
 #else
 			localtime_r(&now, &ltime);
-#endif // PLATFORM_WINDOWS
+#endif // _WIN32
 			strftime(stamp, sizeof(stamp), "[%F %T] ", &ltime);
 		}
 		
