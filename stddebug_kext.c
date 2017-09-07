@@ -147,14 +147,14 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
 #if __LP64__
-			k += snprintf(buffer + k, bufferLength - k, "  0x%.16lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += snprintf(buffer + k, bufferLength - k, "  0x%.16lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
 #else
-			k += snprintf(buffer + k, bufferLength - k, "  0x%.8lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += snprintf(buffer + k, bufferLength - k, "  0x%.8lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
 #endif // __LP64__
 		}
 		
 		// Now that we have the data, print out the label and our buffer
-		kprintf("%s (%lu bytes):\n%s", label, length, 
+		kprintf("%s (%zu bytes):\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\n");
 			
 		if (buffer)

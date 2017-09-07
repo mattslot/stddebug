@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <inttypes.h>
 #include <windows.h>
 
 #include "stddebug.h"
@@ -89,7 +90,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 	if (!gPreflighted)
 	{
 		// Print a pretty header
-		OutputDebugString("--- Log opened ---\r\n");
+		OutputDebugStringA("--- Log opened ---\r\n");
 
 		// Ensure this has been preflighted as well
 		if (gDebugLevel == 1)
@@ -110,7 +111,7 @@ void DebugPostflight()
 	if (gPreflighted)
 	{
 		// Print a pretty trailer
-		OutputDebugString("--- Log closed ---\r\n");
+		OutputDebugStringA("--- Log closed ---\r\n");
 
 		gPreflighted = FALSE;
 	}
@@ -167,7 +168,7 @@ void DebugMessage(int level, const char *format, ...)
 				strcat_s(buffer, bytes, "\r\n");
 
 			// Print and release the string buffer
-			OutputDebugString(buffer);
+			OutputDebugStringA(buffer);
 			free(buffer);
 		}
 
@@ -210,9 +211,9 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
 #if __LP64__
-			k += sprintf_s(buffer + k, 80, "  0x%.16lX | %s| %s\r\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf_s(buffer + k, 80, "  0x%.16" PRIXPTR " | %s| %s\r\n", (uintptr_t)(bytes + i), hex, ascii);
 #else
-			k += sprintf_s(buffer + k, 80, "  0x%.8lX | %s| %s\r\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf_s(buffer + k, 80, "  0x%.8" PRIXPTR " | %s| %s\r\n", (uintptr_t)(bytes + i), hex, ascii);
 #endif // __LP64__
 		}
 		
@@ -221,16 +222,16 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 		
 		// Now that we have the data, print out the label and our buffer
-		i = _scprintf("%s (%lu bytes):\r\n%s", label, length, 
+		i = _scprintf("%s (%zu bytes):\r\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\r\n");
 		if ((output = (char *) malloc(i+1)))
 		{
-			_snprintf(output, i+1, "%s (%lu bytes):\r\n%s", label, length, 
+			_snprintf(output, i+1, "%s (%zu bytes):\r\n%s", label, length, 
 					(buffer) ? buffer : " -- out of memory --\r\n");
-			OutputDebugString(output);
+			OutputDebugStringA(output);
 		}
 		else
-			OutputDebugString(" -- out of memory --\r\n");
+			OutputDebugStringA(" -- out of memory --\r\n");
 			
 		_DebugLeave();
 		free(buffer);

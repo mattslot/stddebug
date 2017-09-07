@@ -168,16 +168,16 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
 #if __LP64__
-			RtlStringCbPrintfA(line, sizeof(line), "  0x%.16lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			RtlStringCbPrintfA(line, sizeof(line), "  0x%.16lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
 #else
-			RtlStringCbPrintfA(line, sizeof(line), "  0x%.8lX | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			RtlStringCbPrintfA(line, sizeof(line), "  0x%.8lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
 #endif // __LP64__
 			RtlStringCbCatNA(buffer, bufferLength, line, sizeof(line));
 		}
 		
 		// Now that we have the data, print out the label and our buffer
 		DbgPrintEx(DPFLTR_DEFAULT_ID, DPFLTR_ERROR_LEVEL, 
-				"%s (%lu bytes):\n%s", label, length, 
+				"%s (%zu bytes):\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\n");
 			
 		if (buffer)

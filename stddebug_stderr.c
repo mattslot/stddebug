@@ -34,6 +34,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -383,9 +384,9 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
 #if __LP64__
-			k += sprintf(buffer + k, "  0x%.16lX | %s| %s\n", (unsigned long)(uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf(buffer + k, "  0x%.16" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
 #else
-			k += sprintf(buffer + k, "  0x%.8lX | %s| %s\n", (unsigned long)(uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf(buffer + k, "  0x%.8" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
 #endif // __LP64__
 		}
 		
@@ -394,7 +395,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
 		
 		// Now that we have the data, print out the label and our buffer
-		fprintf(gOutputFILE, "%s (%lu bytes):\n%s", label, length, 
+		fprintf(gOutputFILE, "%s (%zu bytes):\n%s", label, length, 
 				(buffer) ? buffer : " -- out of memory --\n");
 			
 		_DebugLeave();
