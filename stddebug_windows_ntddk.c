@@ -167,11 +167,11 @@ void DebugData(const char *label, const void *data, size_t length)
 	
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0, ascii[y] = 0;
-#if __LP64__
-			RtlStringCbPrintfA(line, sizeof(line), "  0x%.16lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
+#if _WIN64
+			RtlStringCbPrintfA(line, sizeof(line), "  0x%.16llX | %s| %s\n", (unsigned long long)(bytes + i), hex, ascii);
 #else
 			RtlStringCbPrintfA(line, sizeof(line), "  0x%.8lX | %s| %s\n", (unsigned long)(bytes + i), hex, ascii);
-#endif // __LP64__
+#endif // _WIN64
 			RtlStringCbCatNA(buffer, bufferLength, line, sizeof(line));
 		}
 		
