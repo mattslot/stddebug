@@ -104,6 +104,9 @@ static char *_DebugShortenPath(char *path)
 
 void DebugPreflight(const char *logname, int redirect, int level, int perms)
 {
+	// If we've preflighted already, just return
+	if (gPreflighted) return;
+
 	_DebugEnter();
 	
 	if (!gOutputFILE)
@@ -116,10 +119,6 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 	if (logname && *logname)
 	{
 		char	buffer[PATH_MAX*2+1] = {0};
-
-		// If we've preflighted already, close the previous log
-		if (gPreflighted)
-			DebugPostflight();
 	
 		// Determine where the log file will go
 		if (*logname != '/')
