@@ -202,19 +202,19 @@
 #endif // DEBUG || VERBOSE
 
 #define dLogIfError(check,level,message,...)				do { __typeof(check) __ERROR__ = (check); if (__ERROR__) dLogError(__ERROR__, level, message, ## __VA_ARGS__); } while(0)
-#define dLogIfTrue(check,level,message,...)					do { if ((check)) dLogMessage(level, message, ## __VA_ARGS__); } while(0)
+#define dLogIfTrue(check,level,message,...)					do { if (!!(check)) dLogMessage(level, message, ## __VA_ARGS__); } while(0)
 #define dLogIfFalse(check,level,message,...)				do { if (!(check)) dLogMessage(level, message, ## __VA_ARGS__); } while(0)
 #define dLogIfNull(check,level,message,...)					do { if (!(check)) dLogMessage(level, message, ## __VA_ARGS__); } while(0)
 #define dLog(level,message,...)								dLogMessage(level, message, ## __VA_ARGS__)
 
 #define dFailIfError(check,action,level,message,...)		do { __typeof(check) __ERROR__ = (check); if (__ERROR__) { dLogError(__ERROR__, level, message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
-#define dFailIfTrue(check,action,level,message,...)			do { if ((check)) { dLogMessage(level, message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
+#define dFailIfTrue(check,action,level,message,...)			do { if (!!(check)) { dLogMessage(level, message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
 #define dFailIfFalse(check,action,level,message,...)		do { if (!(check)) { dLogMessage(level, message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
 #define dFailIfNull(check,action,level,message,...)			do { if (!(check)) { dLogMessage(level, message, ## __VA_ARGS__); action; goto CLEANUP; } } while(0)
 #define dFail(level,message,...)							do { dLogMessage(level, message, ## __VA_ARGS__); goto CLEANUP; } while(0)
 
 #define dAssertIfError(check,message,...)					do { __typeof(check) __ERROR__ = (check); if (__ERROR__) dAssertionFailure(message, ## __VA_ARGS__); } while(0)
-#define dAssertIfTrue(check,message,...)					do { if ((check)) dAssertionFailure(message, ## __VA_ARGS__); } while(0)
+#define dAssertIfTrue(check,message,...)					do { if (!!(check)) dAssertionFailure(message, ## __VA_ARGS__); } while(0)
 #define dAssertIfFalse(check,message,...)					do { if (!(check)) dAssertionFailure(message, ## __VA_ARGS__); } while(0)
 #define dAssertIfNull(check,message,...)					do { if (!(check)) dAssertionFailure(message, ## __VA_ARGS__); } while(0)
 #define dAssert(check,message,...)							dAssertIfFalse(check, message, ## __VA_ARGS__)
@@ -259,7 +259,7 @@
   #endif // DEBUG
 
 	#define dPanicIfError(check,message,...)				do { __typeof(check) __ERROR__ = (check); if (__ERROR__) dPanic(message, ## __VA_ARGS__); } while(0)
-	#define dPanicIfTrue(check,message,...)					do { if ((check)) dPanic(message, ## __VA_ARGS__); } while(0)
+	#define dPanicIfTrue(check,message,...)					do { if (!!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 	#define dPanicIfFalse(check,message,...)				do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 	#define dPanicIfNull(check,message,...)					do { if (!(check)) dPanic(message, ## __VA_ARGS__); } while(0)
 
