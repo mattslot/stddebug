@@ -42,6 +42,14 @@
 
 #include "stddebug.h"
 
+#ifndef UNUSED
+  #if defined(__GNUC__)
+	#define	UNUSED(x)	x __attribute__((unused))
+  #else _WIN32
+	#define	UNUSED(x)	__pragma(warning(suppress:4100)) x
+  #endif
+#endif // UNUSED
+
 static	BOOL						gPreflighted = 0;
 static	BOOL						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
@@ -51,7 +59,7 @@ static	BOOL						gDebugStamp = 0;
 static	INIT_ONCE					gInitOnce = INIT_ONCE_STATIC_INIT; 
 static	CRITICAL_SECTION			gCriticalSection;
 
-static BOOL CALLBACK PrepareCriticalSection(PINIT_ONCE once, PVOID param, PVOID *context)
+static BOOL CALLBACK PrepareCriticalSection(PINIT_ONCE UNUSED(once), PVOID UNUSED(param), PVOID *UNUSED(context))
 {
 	InitializeCriticalSection(&gCriticalSection);
 	return TRUE;
@@ -83,7 +91,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, int redirect, int level, int perms)
+void DebugPreflight(const char *logname, int UNUSED(redirect), int level, int perms)
 {
 	_DebugEnter();
 	
@@ -119,7 +127,7 @@ void DebugPostflight()
 	_DebugLeave();
 }
 
-void DebugMessage(int level, const char *format, ...)
+void DebugMessage(int UNUSED(level), const char *format, ...)
 {
 	char			stamp[24] = "";
 	char *			buffer = NULL;
@@ -148,7 +156,7 @@ void DebugMessage(int level, const char *format, ...)
 		va_start(args, format);
 		length = _vscprintf(format, args);
 		bytes = strlen(stamp) + length + strlen("\r\n") + 1;
-		if ((buffer = calloc(1, bytes)))
+		if ((buffer = calloc(1, length + 1)) != NULL)
 		{
 			snprintf(buffer, bytes, "%s", stamp); // Prefix with the optional stamp
 			vsnprintf_s(buffer + strlen(buffer), length + 1, length + 1, format, args);

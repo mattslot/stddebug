@@ -55,6 +55,15 @@
 
 #include "stddebug.h"
 
+#ifndef UNUSED
+  #if defined(__GNUC__)
+	#define	UNUSED(x)	x __attribute__((unused))
+  #elif _WIN32
+	#define	UNUSED(x)	__pragma(warning(suppress:4100)) x
+  #else
+	#error "Platform not supported"
+  #endif
+#endif // UNUSED
 
 static	bool						gPreflighted = 0;
 static	bool						gDebugEnabled = 1;
@@ -76,7 +85,7 @@ static	bool						gDebugStamp = 0;
 #endif // _WIN32
 
 #if _WIN32
-static BOOL CALLBACK PrepareCriticalSection(PINIT_ONCE once, PVOID param, PVOID *context)
+static BOOL CALLBACK PrepareCriticalSection(PINIT_ONCE UNUSED(once), PVOID UNUSED(param), PVOID *UNUSED(context))
 {
 	InitializeCriticalSection(&gCriticalSection);
 	return TRUE;
@@ -133,7 +142,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, int redirect, int level, int perms)
+void DebugPreflight(const char *logname, int UNUSED(redirect), int level, int perms)
 {
 	// If we've preflighted already, just return
 	if (gPreflighted) return;
@@ -191,7 +200,7 @@ void DebugPreflight(const char *logname, int redirect, int level, int perms)
 			fclose(gOutputFILE);
 	
 #if _WIN32
-		if ((strlen(buffer) <= MAX_PATH) && (gOutputFILE = fopen(buffer, "a")))
+		if ((strlen(buffer) <= MAX_PATH) && (gOutputFILE = fopen(buffer, "a")) != NULL)
 #else
 		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
 #endif // _WIN32
@@ -292,7 +301,7 @@ void DebugPostflight()
 	_DebugLeave();
 }
 
-void DebugMessage(int level, const char *format, ...)
+void DebugMessage(int UNUSED(level), const char *format, ...)
 {
 	const char *	eol = "";
 	char			stamp[24] = "";
@@ -323,7 +332,7 @@ void DebugMessage(int level, const char *format, ...)
 		// Format the message into an editable buffer
 		va_start(args, format);
 		length = vsnprintf(NULL, 0, format, args);
-		if ((buffer = calloc(1, length + 1)))
+		if ((buffer = calloc(1, length + 1)) != NULL)
 			vsnprintf(buffer, length + 1, format, args);
 		va_end(args);
 		
