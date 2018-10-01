@@ -142,7 +142,7 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, int UNUSED(redirect), int level, int perms)
+void DebugPreflight(const char *logname, bool UNUSED(redirect), int level, int perms)
 {
 	// If we've preflighted already, just return
 	if (gPreflighted) return;
@@ -384,13 +384,18 @@ void DebugData(const char *label, const void *data, size_t length)
 					ascii[y++] = ((bytes[i] < 0x20) || (bytes[i] > 0x7E)) ? '*' : bytes[i];
 				}
 				else
-					hex[x++] = ':', hex[x++] = ':', ascii[y++] = ':';
+				{
+					hex[x++] = ':';
+					hex[x++] = ':';
+					ascii[y++] = ':';
+				}
 
 				if ((x+1)%9 == 0) hex[x++] = ' ';
 			}
 
 			// Now format the string nicely into our buffer, and advance our mark
-			hex[x] = 0, ascii[y] = 0;
+			hex[x] = 0;
+			ascii[y] = 0;
 #if __LP64__
 			k += sprintf(buffer + k, "  0x%.16" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
 #else
@@ -447,9 +452,15 @@ int DebugLevel(void)
 			int value = (level) ? (int)strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
 
 			if (value <= 0)
-				gDebugLevel = value, gDebugMask = 0;
+			{
+				gDebugLevel = value;
+				gDebugMask = 0;
+			}
 			else
-				gDebugMask = value, gDebugLevel = DEBUG_LEVEL_ERROR;
+			{
+				gDebugMask = value;
+				gDebugLevel = DEBUG_LEVEL_ERROR;
+			}
 		}
 		
 		_DebugLeave();
@@ -475,15 +486,15 @@ int DebugMask(void)
 	return gDebugMask;
 }
 
-int DebugShouldLog(int value)
+bool DebugShouldLog(int value)
 {
-	int shouldLog = 0;
+	bool shouldLog = true;
 	
 	_DebugEnter();
 	if (value < 0)
-		shouldLog = (DebugLevel() <= value) ? 1 : 0;
+		shouldLog = (DebugLevel() <= value) ? true : false;
 	else 
-		shouldLog = (DebugMask() & value) ? 1 : 0;
+		shouldLog = (DebugMask() & value) ? true : false;
 	_DebugLeave();
 	
 	return shouldLog;

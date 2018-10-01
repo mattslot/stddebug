@@ -297,7 +297,7 @@ extern "C" {
 		
 		This function is typically called once at the beginning of your application.
 */
-extern void DebugPreflight(const char *logname, int redirect, int level, int perms);
+extern void DebugPreflight(const char *logname, bool redirect, int level, int perms);
 
 /*!
 	@abstract Log debug messages to the console or logfile.
@@ -395,7 +395,7 @@ extern int DebugMask(void);
 		the current configuration and returns true if the message should be
 		logged.
 */
-extern int DebugShouldLog(int value);
+extern bool DebugShouldLog(int value);
 
 /*!
 	@abstract For implementations that cache the logging, return that history.

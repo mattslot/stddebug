@@ -95,7 +95,7 @@ static DWORD _GetFilterLevel(int debugLevel)
 	return DPFLTR_ERROR_LEVEL;
 }
 
-void DebugPreflight(const char *logname, int redirect, int level, int perms)
+void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 {
 	(void)logname;
 	(void)redirect;
@@ -160,13 +160,18 @@ void DebugData(const char *label, const void *data, size_t length)
 					ascii[y++] = ((bytes[i] < 0x20) || (bytes[i] > 0x7E)) ? '*' : bytes[i];
 				}
 				else
-					hex[x++] = ':', hex[x++] = ':', ascii[y++] = ':';
+				{
+					hex[x++] = ':';
+					hex[x++] = ':';
+					ascii[y++] = ':';
+				}
 	
 				if ((x+1)%9 == 0) hex[x++] = ' ';
 			}
 	
 			// Now format the string nicely into our buffer, and advance our mark
-			hex[x] = 0, ascii[y] = 0;
+			hex[x] = 0;
+			ascii[y] = 0;
 #if _WIN64
 			RtlStringCbPrintfA(line, sizeof(line), "  0x%.16llX | %s| %s\n", (unsigned long long)(bytes + i), hex, ascii);
 #else
@@ -224,14 +229,14 @@ int DebugMask(void)
 	return gDebugMask;
 }
 
-int DebugShouldLog(int value)
+bool DebugShouldLog(int value)
 {
-	int shouldLog = 0;
+	bool shouldLog = true;
 	
 	if (value < 0)
-		shouldLog = (DebugLevel() <= value) ? 1 : 0;
+		shouldLog = (DebugLevel() <= value) ? true : false;
 	else 
-		shouldLog = (DebugMask() & value) ? 1 : 0;
+		shouldLog = (DebugMask() & value) ? true : false;
 	
 	return shouldLog;
 }
