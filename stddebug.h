@@ -252,8 +252,14 @@
 	#define __PREFIX__		""
   #endif // MODULE_NAME
 
-  #if DEBUG || VERBOSE
-	#define dPanic(m,...)									do { panic_plain(__PREFIX__  "PANIC: " m __WHERE__ "\n", ## __VA_ARGS__); } while(0)
+  #ifdef panic_plain
+  	#define PANIC	panic_plain
+  #else
+    #define PANIC	panic
+  #endif // panic_plain
+
+  #if 0
+	#define dPanic(m,...)									do { PANIC(__PREFIX__  "PANIC: " m __WHERE__ "\n", ## __VA_ARGS__); } while(0)
   #else
 	#define dPanic(m,...)									do { kprintf(__PREFIX__ "PANIC: "      m __WHERE__ "\n", ## __VA_ARGS__); } while(0)
   #endif // DEBUG
