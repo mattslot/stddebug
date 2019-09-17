@@ -182,7 +182,7 @@
 	// Debugger and logging hooks
 
 	#define dLogMessage(l,m,...)		do { if (DebugShouldLog(l)) DebugMessage((l), __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
-	#define dLogError(e,l,m,...)		do { if (DebugShouldLog(l)) DebugMessage((l), __DEBUGSTR__("ERROR %i: " m __WHERE__ "\n"), (int)(e), ## __VA_ARGS__); } while(0)
+	#define dLogError(e,l,m,...)		do { if (DebugShouldLog(l)) DebugMessage((l), __DEBUGSTR__("ERROR %d: " m __WHERE__ "\n"), (int)(e), ## __VA_ARGS__); } while(0)
 	
   #if DEBUG
 	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); DEBUGGER(); abort(); } while(0)
