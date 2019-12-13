@@ -280,34 +280,43 @@ int DebugLevel(void)
 {
 	if (gDebugLevel == 1)
 	{
+		int		useLevel = DEBUG_LEVEL_FAILURE;
+
 		_DebugEnter();
 		
 		if (gDebugLevel == 1)
 		{
 			char *level = NULL;
-			int value = DEBUG_LEVEL_FAILURE;
 
 			_dupenv_s(&level, NULL, DEBUG_LEVEL_ENV_VAR);
-			if (level) value = (int)strtol(level, NULL, 10);
+			if (level)
+			{
+				value = (int)strtol(level, NULL, 10);
 			
-			if (level && (value <= 0))
-			{
-				gDebugLevel = value;
-				gDebugMask = 0;
-			}
-			else
-			{
-				gDebugMask = value;
-				gDebugLevel = DEBUG_LEVEL_ERROR;
-			}
-
+				if (value <= 0)
+				{
+					gDebugLevel = value;
+					gDebugMask = 0;
+				}
+				else
+				{
+					gDebugMask = value;
+					gDebugLevel = DEBUG_LEVEL_ERROR;
+				}
+	
+			useLevel = gDebugLevel;
 			free(level);
+			}
 		}
+		else
+			useLevel = gDebugLevel;
 		
 		_DebugLeave();
+		
+		return useLevel;
 	}
-
-	return gDebugLevel;
+	else
+		return gDebugLevel;
 }
 
 void SetDebugMask(int mask)

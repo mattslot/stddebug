@@ -375,29 +375,43 @@ int DebugLevel(void)
 {
 	if (gDebugLevel == 1)
 	{
+		// Default to highest level
+		int		useLevel = DEBUG_LEVEL_FAILURE;
+		
 		_DebugEnter();
 		
 		if (gDebugLevel == 1)
 		{
+			// Initialize from the environment, if any
 			char *level = getenv(DEBUG_LEVEL_ENV_VAR);
-			int value = (level) ? (int)strtol(level, NULL, 10) : DEBUG_LEVEL_FAILURE;
 
-			if (value <= 0)
+			if (level)
 			{
-				gDebugLevel = value;
-				gDebugMask = 0;
-			}
-			else
-			{
-				gDebugMask = value;
-				gDebugLevel = DEBUG_LEVEL_ERROR;
+				int value = (int)strtol(level, NULL, 10);
+				
+				if (value <= 0)
+				{
+					gDebugLevel = value;
+					gDebugMask = 0;
+				}
+				else
+				{
+					gDebugMask = value;
+					gDebugLevel = DEBUG_LEVEL_ERROR;
+				}
+				
+				useLevel = gDebugLevel;
 			}
 		}
+		else
+			useLevel = gDebugLevel;
 		
 		_DebugLeave();
+		
+		return useLevel;
 	}
-
-	return gDebugLevel;
+	else
+		return gDebugLevel;
 }
 
 void SetDebugMask(int mask)
