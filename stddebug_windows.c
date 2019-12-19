@@ -291,7 +291,7 @@ int DebugLevel(void)
 			_dupenv_s(&level, NULL, DEBUG_LEVEL_ENV_VAR);
 			if (level)
 			{
-				value = (int)strtol(level, NULL, 10);
+				int value = (int)strtol(level, NULL, 10);
 			
 				if (value <= 0)
 				{
