@@ -337,6 +337,41 @@ extern void DebugData(const char *label, const void *data, size_t length);
 extern void DebugPostflight(void);
 
 /*!
+	@abstract For implementations that log to a file, start logging to a new file.
+	@param newFileName The suggested name of the new file to start logging to.
+	@discussion
+		The current log file will be closed and a new log file will be created 
+		at the given path. Subsequent log entries will be written to the new file.
+		This function is thread-safe.
+*/
+extern void DebugSwitchLogFile(const char *newFileName);
+
+/*!
+	@abstract For implementations that log to a file, swap out the existing log file.
+	@param newFileName The suggested name to use for the existing log file.
+	@discussion
+		The current log file will be closed and renamed to the suggested name. A new
+		log file will be created at the original path and subsequent log entries will 
+		be written to that file.
+		This function is thread-safe.
+*/
+
+extern void DebugRotateLogFile(const char *newFileName);
+
+/*!
+	@abstract For implementations that cache the logging, return that history.
+	@result A string buffer (char *, CFStringRef) containing the log history.
+		The caller is responsible for releasing this buffer.
+	@discussion
+		For implementations that log to a memory buffer instead of a file,
+		this routine returns an allocated pointer or retained CFStringRef
+		containing the log information.
+	
+*/
+extern __DEBUGSTR_TYPE__ CopyDebugHistory(void);
+
+
+/*!
 	@abstract Toggle the debugging output on or off.
 	@param enable Non-zero to enable logging, zero to disable. Default state is enabled.
 */
@@ -402,18 +437,6 @@ extern int DebugMask(void);
 		logged.
 */
 extern bool DebugShouldLog(int value);
-
-/*!
-	@abstract For implementations that cache the logging, return that history.
-	@result A string buffer (char *, CFStringRef) containing the log history.
-		The caller is responsible for releasing this buffer.
-	@discussion
-		For implementations that log to a memory buffer instead of a file,
-		this routine returns an allocated pointer or retained CFStringRef
-		containing the log information.
-	
-*/
-extern __DEBUGSTR_TYPE__ CopyDebugHistory(void);
 
 #if __has_feature(objc_arc)
 	#pragma arc_cf_code_audited end
