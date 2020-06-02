@@ -204,7 +204,7 @@ static void _DebugOpenLogFile()
 		setvbuf(gOutputFILE, NULL, _IONBF, 0);
 
 		// Apply the suggested (or default) file permissions
-		_chmod(buffer, (gOutputPerms) ? gOutputPerms : 0600);
+		_chmod(gOutputPath, (gOutputPerms) ? gOutputPerms : 0600);
 #else
 		// Enable line buffering
 		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
