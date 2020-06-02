@@ -189,8 +189,6 @@ static void _DebugNameLogFile(const char *input, char *output, size_t maxlen)
 	strncat(output, input, maxlen - strlen(output) - 1);
 	if (! strstr(input, ".log") && ! strstr(input, ".txt"))
 		strncat(output, ".log", maxlen - strlen(output) - 1);
-		
-	printf("NAME = %s\n", output);
 }
 
 // Open a new file and use it's file descriptor for our logging
