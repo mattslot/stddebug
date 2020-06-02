@@ -113,12 +113,12 @@ void DebugPostflight()
 
 void DebugSwitchLogFile(const char *newFileName)
 {
-	; // Nothing to do
+	(void)newFileName;
 }
 
 void DebugRotateLogFile(const char *newFileName)
 {
-	; // Nothing to do
+	(void)newFileName;
 }
 
 char * CopyDebugHistory()
