@@ -135,6 +135,10 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
+#if 0
+#pragma mark -
+#endif
+
 void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 {
 	_DebugEnter();
@@ -213,6 +217,36 @@ void DebugPostflight()
 	
 	_DebugLeave();
 }
+
+void DebugSwitchLogFile(const char *UNUSED(newFileName))
+{
+	; // Unused in this implementation
+}
+
+void DebugRotateLogFile(const char *UNUSED(newFileName))
+{
+	; // Unused in this implementation
+}
+
+CFStringRef CopyDebugHistory(void)
+{
+	CFStringRef		string = NULL;
+	
+	_DebugEnter();
+	
+	if (gOutputBuffer)
+		string = CFStringCreateCopy(NULL, gOutputBuffer);
+	else
+		string = CFSTR("");
+	
+	_DebugLeave();
+
+	return string;
+}
+
+#if 0
+#pragma mark -
+#endif
 
 void DebugMessage(int level, CFStringRef format, ...)
 {
@@ -440,20 +474,4 @@ bool DebugShouldLog(int value)
 	_DebugLeave();
 	
 	return shouldLog;
-}
-
-CFStringRef CopyDebugHistory(void)
-{
-	CFStringRef		string = NULL;
-	
-	_DebugEnter();
-	
-	if (gOutputBuffer)
-		string = CFStringCreateCopy(NULL, gOutputBuffer);
-	else
-		string = CFSTR("");
-	
-	_DebugLeave();
-
-	return string;
 }

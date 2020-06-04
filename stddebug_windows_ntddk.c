@@ -111,6 +111,25 @@ void DebugPostflight()
 
 }
 
+void DebugSwitchLogFile(const char *newFileName)
+{
+	(void)newFileName;
+}
+
+void DebugRotateLogFile(const char *newFileName)
+{
+	(void)newFileName;
+}
+
+char * CopyDebugHistory()
+{
+	return NULL;
+}
+
+#if 0
+#pragma mark -
+#endif
+
 void DebugMessage(int level, const char *format, ...)
 {
 	if (gDebugEnabled)
@@ -239,9 +258,4 @@ bool DebugShouldLog(int value)
 		shouldLog = (DebugMask() & value) ? true : false;
 	
 	return shouldLog;
-}
-
-char * CopyDebugHistory()
-{
-	return NULL;
 }

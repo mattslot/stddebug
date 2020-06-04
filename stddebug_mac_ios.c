@@ -62,9 +62,12 @@
 
 
 static	bool						gPreflighted = 0;
-static	bool						gDebugEnabled = 1;
 static	int							gOutputFileNo = 0;
 static	FILE *						gOutputFILE = NULL;
+static	char						gOutputPath[PATH_MAX+1] = "";
+static	int							gOutputPerms = 0600;
+
+static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 static	bool						gDebugStamp = 0;
@@ -102,102 +105,165 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
+// Generate an absolute path based on the suggested name
+static void _DebugNameLogFile(const char *input, char *output, size_t maxlen)
+{
+	// Clear the output buffer, ensure zero terminator
+	memset(output, 0, maxlen);
+
+	if (*input != '/')
+	{
+		const char * home = getenv("HOME");
+	
+		if (! geteuid())
+			snprintf(output, maxlen, "/var/log/");
+		else if (home)
+		{
+#if __APPLE__
+			snprintf(output, maxlen, "%s/Library/Logs/", home);
+#else
+			snprintf(output, maxlen, "%s/log/", home);
+#endif // __APPLE__
+			mkdir(output, 0700);
+		}
+	}
+
+	strncat(output, input, maxlen - strlen(output) - 1);
+	if (! strstr(input, ".log") && ! strstr(input, ".txt"))
+		strncat(output, ".log", maxlen - strlen(output) - 1);
+}
+
+// Open a new file and use it's file descriptor for our logging
+static void _DebugOpenLogFile()
+{
+	if (gOutputPath[0])
+		gOutputFILE = fopen(gOutputPath, "a");
+	
+	if (gOutputFILE != NULL)
+	{
+		// Enable line buffering
+		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
+		
+		// Apply the suggested (or default) file permissions
+		fchmod(gOutputFileNo, (gOutputPerms) ? gOutputPerms : 0600);
+
+		// Cache the file number that matches the FILE
+		gOutputFileNo = fileno(gOutputFILE);
+	}
+	else
+	{
+		// Default back to stderr
+		gOutputFILE = stderr;
+		gOutputFileNo = STDERR_FILENO;
+	}
+}
+
+// Close the previous log file, if any
+static void _DebugCloseLogFile()
+{
+	if (gOutputFILE && (gOutputFILE != stderr))
+	{
+		fclose(gOutputFILE);
+		gOutputFILE = stderr;
+		gOutputFileNo = STDERR_FILENO;
+	}
+	else if (gOutputFileNo && (gOutputFileNo != -1))
+	{
+		close(gOutputFileNo);
+		gOutputFileNo = STDERR_FILENO;
+	}
+}
+
+// Write a log header to the file
+static void _DebugWriteHeader()
+{
+	time_t		now;
+	char		stamp[64] = "";
+	char		name[PATH_MAX] = "";
+	char		vers[32] = "";
+	CFStringRef cfstr = NULL;
+
+	// Print a pretty header
+	time(&now);
+	ctime_r(&now, stamp);
+	strtok(stamp, "\n");
+	fprintf(gOutputFILE, "--- Log opened %s ---\n", stamp);
+
+	// Including the bundle or executable name and version
+#if TARGET_OS_MAC || TARGET_OS_IPHONE
+	if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
+			CFBundleGetMainBundle(), CFSTR("CFBundleName"))))
+		CFStringGetCString(cfstr, name, sizeof(name), kCFStringEncodingUTF8);
+	if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
+			CFBundleGetMainBundle(), CFSTR("CFBundleVersion"))))
+		CFStringGetCString(cfstr, vers, sizeof(vers), kCFStringEncodingUTF8);
+	if (*name)
+		fprintf(gOutputFILE, "--- %s %s ---\n", name, vers);
+#endif // TARGET_OS_MAC || TARGET_OS_IPHONE
+#if TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
+	else
+	{
+		// Handle non-bundle processes (daemons, command-line tools)
+		proc_name(getpid(), name, (uint32_t) sizeof(name));
+		if (*name) 
+#if defined(VERSION)
+			fprintf(gOutputFILE, "--- %s %s ---\n", name, VERSION);
+#else
+			fprintf(gOutputFILE, "--- %s ---\n", name);
+#endif // VERSION
+	}
+#endif // TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
+}
+
+// Write a log footer to the file
+static void _DebugWriteFooter()
+{
+	time_t		now;
+	char		stamp[64] = "";
+
+	// Print a pretty trailer
+	time(&now);
+	ctime_r(&now, stamp);
+	strtok(stamp, "\n");
+	fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
+}
+
+#if 0
+#pragma mark -
+#endif
+
 void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 {
-	// If we've preflighted already, just return
-	if (gPreflighted) return;
-
 	_DebugEnter();
-	
-	if (!gOutputFILE)
-		gOutputFILE = stderr;
-	if (!gOutputFileNo)
-		gOutputFileNo = STDERR_FILENO;
 	
 	// Ignore logfile directives on iOS -- we always go to stderr
 #if !TARGET_OS_IPHONE
 	if (logname && *logname)
 	{
-		char	buffer[PATH_MAX*2+1] = {0};
-	
-		// Determine where the log file will go
-		if (*logname != '/')
-		{
-			const char * home = getenv("HOME");
-		
-			if (! geteuid())
-				strcpy(buffer, "/var/log/");
-			else if (home)
-			{
-#if __APPLE__
-				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", home);
-#else
-				snprintf(buffer, sizeof(buffer), "%s/log/", home);
-#endif // __APPLE__
-				mkdir(buffer, 0700);
-			}
-		}
-		strncat(buffer, logname, sizeof(buffer)-strlen(buffer)-1);
-		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
-			strncat(buffer, ".log", sizeof(buffer)-strlen(buffer)-1);
-		
-		// Close the previous file
-		if (gOutputFILE && (gOutputFILE != stderr))
-			fclose(gOutputFILE);
-	
-		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
-		{
-			// Open a new file and use it's file descriptor for our logging
-			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-			gOutputFileNo = fileno(gOutputFILE);
-			fchmod(gOutputFileNo, (perms) ? perms : 0600);
-		}
-		else
-		{
-			// Default back to stderr
-			gOutputFILE = stderr;
-			gOutputFileNo = STDERR_FILENO;
-		}
+		// If we've preflighted already, close the previous log
+		_DebugCloseLogFile();
+
+		// Determine where the new log file will go
+		_DebugNameLogFile(logname, gOutputPath, sizeof(gOutputPath));
+		if (perms) gOutputPerms = perms;
+
+		// Open the new file and use it's file descriptor for our logging
+		_DebugOpenLogFile();
+		if (gOutputFILE == NULL) goto CLEANUP;
 	}
+	else 
 #endif // !TARGET_OS_IPHONE
-	
-	if (!gPreflighted)
+	if (! gPreflighted)
 	{
-		time_t		now;
-		char		stamp[26] = "";
-		char		name[PATH_MAX] = "";
-		char		vers[32] = "";
-		CFStringRef cfstr = NULL;
-
-		// Print a pretty header
-		time(&now);
-		ctime_r(&now, stamp);
-		strtok(stamp, "\n");
-		fprintf(gOutputFILE, "--- Log opened %s ---\n", stamp);
-
-#if TARGET_OS_MAC || TARGET_OS_IPHONE
-		if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
-				CFBundleGetMainBundle(), CFSTR("CFBundleName"))))
-			CFStringGetCString(cfstr, name, sizeof(name), kCFStringEncodingUTF8);
-		if ((cfstr = (CFStringRef) CFBundleGetValueForInfoDictionaryKey(
-				CFBundleGetMainBundle(), CFSTR("CFBundleVersion"))))
-			CFStringGetCString(cfstr, vers, sizeof(vers), kCFStringEncodingUTF8);
-		if (*name)
-			fprintf(gOutputFILE, "--- %s %s ---\n", name, vers);
-#endif // TARGET_OS_MAC || TARGET_OS_IPHONE
-#if TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
-		else
-		{
-			// Handle non-bundle processes (daemons, command-line tools)
-			proc_name(getpid(), name, (uint32_t) sizeof(name));
-			if (*name) 
-  #if defined(VERSION)
-				fprintf(gOutputFILE, "--- %s %s ---\n", name, VERSION);
-  #else
-				fprintf(gOutputFILE, "--- %s ---\n", name);
-  #endif // VERSION
-		}
-#endif // TARGET_OS_MAC && !TARGET_CPU_ARM && !TARGET_CPU_ARM64
+		// Default to stderr if no name is specifieds
+		gOutputFILE = stderr;
+		gOutputFileNo = STDERR_FILENO;
+	}
+	
+	if (! gPreflighted)
+	{
+		// Prefix the file with a pretty header
+		_DebugWriteHeader();
 
 		// Ensure this has been preflighted as well
 		if (gDebugLevel == 1)
@@ -216,34 +282,76 @@ void DebugPostflight()
 {
 	_DebugEnter();
 	
+	// Close the existing log, if any
 	if (gPreflighted)
-	{
-		time_t		now;
-		char		stamp[26] = "";
+		_DebugWriteFooter();
+	_DebugCloseLogFile();
 
-		// Print a pretty trailer
-		time(&now);
-		ctime_r(&now, stamp);
-		strtok(stamp, "\n");
-		fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
+	gPreflighted = false;
 
-		gPreflighted = false;
-	}
-	
-	if (gOutputFILE && (gOutputFILE != stderr))
-	{
-		fclose(gOutputFILE);
-		gOutputFILE = stderr;
-		gOutputFileNo = STDERR_FILENO;
-	}
-	else if (gOutputFileNo)
-	{
-		close(gOutputFileNo);
-		gOutputFileNo = STDERR_FILENO;
-	}
-	
 	_DebugLeave();
 }
+
+static void _DebugSwitchLogFile(const char *renameTo, const char *switchTo)
+{
+	// Close the existing log
+	_DebugWriteFooter();
+	_DebugCloseLogFile();
+	
+	if (renameTo)
+	{
+		char		renameBuffer[PATH_MAX + 1] = "";
+
+		// Rename the existing log file, still output to the same path
+		_DebugNameLogFile(renameTo, renameBuffer, sizeof(renameBuffer));
+		rename(gOutputPath, renameBuffer); // Will unlink existing file
+	}
+	else if (switchTo)
+	{
+		// Switch our target to the indicated path
+		_DebugNameLogFile(switchTo, gOutputPath, sizeof(gOutputPath));
+	}
+
+	// Open a new file and use it's file descriptor for our logging
+	_DebugOpenLogFile();
+	if (gOutputFILE)
+		_DebugWriteHeader();
+	else
+		gPreflighted = false;
+}
+
+void DebugSwitchLogFile(const char *newFileName)
+{
+	_DebugEnter();
+
+	if (! gPreflighted)
+		DebugPreflight(newFileName, false, DEBUG_LEVEL_ERROR, 0);
+	else if (newFileName)
+		_DebugSwitchLogFile(NULL, newFileName);
+
+	_DebugLeave();
+}
+
+void DebugRotateLogFile(const char *newFileName)
+{
+	_DebugEnter();
+
+	if (! gPreflighted)
+		DebugPreflight(newFileName, false, DEBUG_LEVEL_ERROR, 0);
+	else if (newFileName)
+		_DebugSwitchLogFile(newFileName, NULL);
+
+	_DebugLeave();
+}
+
+__DEBUGSTR_TYPE__ CopyDebugHistory()
+{
+	return NULL; // Unused in this implementation
+}
+
+#if 0
+#pragma mark -
+#endif
 
 void DebugMessage(int level, __DEBUGSTR_ARG__ format, ...)
 {
@@ -474,9 +582,4 @@ bool DebugShouldLog(int value)
 	_DebugLeave();
 	
 	return shouldLog;
-}
-
-__DEBUGSTR_TYPE__ CopyDebugHistory()
-{
-	return NULL;
 }

@@ -72,6 +72,10 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
+#if 0
+#pragma mark 0
+#endif
+
 void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 {
 	if (gDebugLevel == 1)
@@ -81,8 +85,27 @@ void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 
 void DebugPostflight()
 {
-
+	; // Nothing to do
 }
+
+void DebugSwitchLogFile(const char *newFileName)
+{
+	; // Unused in this implementation
+}
+
+void DebugRotateLogFile(const char *newFileName)
+{
+	; // Unused in this implementation
+}
+
+char * CopyDebugHistory()
+{
+	return NULL; // Unused in this implementation
+}
+
+#if 0
+#pragma mark -
+#endif 
 
 void DebugMessage(int level, const char *format, ...)
 {
@@ -216,9 +239,4 @@ bool DebugShouldLog(int value)
 		shouldLog = (DebugMask() & value) ? true : false;
 	
 	return shouldLog;
-}
-
-char * CopyDebugHistory()
-{
-	return NULL;
 }

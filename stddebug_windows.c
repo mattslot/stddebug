@@ -91,7 +91,11 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, bool UNUSED(redirect), int level, int perms)
+#if 0
+#pragma mark -
+#endif
+
+void DebugPreflight(const char *logname, bool UNUSED(redirect), int level, int UNUSED(perms))
 {
 	_DebugEnter();
 	
@@ -126,6 +130,25 @@ void DebugPostflight()
 	
 	_DebugLeave();
 }
+
+void DebugSwitchLogFile(const char *UNUSED(newFileName))
+{
+	; // Unused in this implementation
+}
+
+void DebugRotateLogFile(const char *UNUSED(newFileName))
+{
+	; // Unused in this implementation
+}
+
+char * CopyDebugHistory()
+{
+	return NULL; // Unused in this implementation
+}
+
+#if 0
+#pragma mark -
+#endif
 
 void DebugMessage(int UNUSED(level), const char *format, ...)
 {
@@ -348,9 +371,4 @@ bool DebugShouldLog(int value)
 	_DebugLeave();
 	
 	return shouldLog;
-}
-
-char * CopyDebugHistory()
-{
-	return NULL;
 }

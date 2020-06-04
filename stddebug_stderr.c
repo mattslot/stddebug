@@ -65,12 +65,21 @@
   #endif
 #endif // UNUSED
 
+#if _WIN32
+	#define MAX_PATH_LENGTH			MAX_PATH
+#else
+	#define MAX_PATH_LENGTH			PATH_MAX
+#endif
+
 static	bool						gPreflighted = 0;
-static	bool						gDebugEnabled = 1;
 #if ! _WIN32
-	static	int						gOutputFileNo = 0;
+	static	int						gOutputFileNo = -1;
 #endif // ! _WIN32
 static	FILE *						gOutputFILE = NULL;
+static	char						gOutputPath[MAX_PATH_LENGTH+1] = "";
+static	int							gOutputPerms = 0600;
+
+static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
 static	bool						gDebugStamp = 0;
@@ -142,110 +151,169 @@ static char *_DebugShortenPath(char *path)
 	return path;
 }
 
-void DebugPreflight(const char *logname, bool UNUSED(redirect), int level, int perms)
+// Generate an absolute path based on the suggested name
+static void _DebugNameLogFile(const char *input, char *output, size_t maxlen)
 {
-	// If we've preflighted already, just return
-	if (gPreflighted) return;
+	// Clear the output buffer, ensure zero terminator
+	memset(output, 0, maxlen);
 
-	_DebugEnter();
+#if _WIN32
+	if ((input[0] != '\\') &&
+			((input[0] < 'A') || (input[0] > 'Z') || (input[1] != ':') || (input[2] != '\\')) &&
+			((input[0] < 'a') || (input[0] > 'z') || (input[1] != ':') || (input[2] != '\\')))
+	{
+		char		buffer[MAX_PATH_LENGTH + 1] = "";
+		
+		if (SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer) == S_OK)
+			snprintf(output, maxlen, "%s\\", buffer); // Path separator
+	}
+#else
+	if (*input != '/')
+	{
+		const char * home = getenv("HOME");
 	
-	if (!gOutputFILE)
+		if (! geteuid())
+			snprintf(output, maxlen, "/var/log/");
+		else if (home)
+		{
+#if __APPLE__
+			snprintf(output, maxlen, "%s/Library/Logs/", home);
+#else
+			snprintf(output, maxlen, "%s/log/", home);
+#endif // __APPLE__
+			mkdir(output, 0700);
+		}
+	}
+#endif // ! _WIN32
+
+	strncat(output, input, maxlen - strlen(output) - 1);
+	if (! strstr(input, ".log") && ! strstr(input, ".txt"))
+		strncat(output, ".log", maxlen - strlen(output) - 1);
+}
+
+// Open a new file and use it's file descriptor for our logging
+static void _DebugOpenLogFile()
+{
+	if (gOutputPath[0])
+		gOutputFILE = fopen(gOutputPath, "a");
+	
+	if (gOutputFILE != NULL)
+	{
+#if _WIN32
+		// Disable buffering entirely
+		setvbuf(gOutputFILE, NULL, _IONBF, 0);
+
+		// Apply the suggested (or default) file permissions
+		_chmod(gOutputPath, (gOutputPerms) ? gOutputPerms : 0600);
+#else
+		// Enable line buffering
+		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
+		
+		// Apply the suggested (or default) file permissions
+		fchmod(gOutputFileNo, (gOutputPerms) ? gOutputPerms : 0600);
+
+		// Cache the file number that matches the FILE
+		gOutputFileNo = fileno(gOutputFILE);
+#endif // _WIN32
+	}
+	else
+	{
+		// Default back to stderr
 		gOutputFILE = stderr;
 #if ! _WIN32
-	if (!gOutputFileNo)
 		gOutputFileNo = STDERR_FILENO;
 #endif // ! _WIN32
+	}
+}
+
+// Close the previous log file, if any
+static void _DebugCloseLogFile()
+{
+	if (gOutputFILE && (gOutputFILE != stderr))
+	{
+		fclose(gOutputFILE);
+		gOutputFILE = stderr;
+#if ! _WIN32
+		gOutputFileNo = STDERR_FILENO;
+#endif // ! _WIN32
+	}
+#if ! _WIN32
+	else if (gOutputFileNo && (gOutputFileNo != -1))
+	{
+		close(gOutputFileNo);
+		gOutputFileNo = STDERR_FILENO;
+	}
+#endif // ! _WIN32
+}
+
+// Write a log header to the file
+static void _DebugWriteHeader()
+{
+	time_t		now;
+	char		stamp[64] = "";
+
+	// Print a pretty header
+	time(&now);
+#if _WIN32
+	ctime_s(stamp, sizeof(stamp), &now);
+#else
+	ctime_r(&now, stamp);
+#endif // _WIN32
+	strtok(stamp, "\n");
+	fprintf(gOutputFILE, "--- Log opened %s ---\n", stamp);
+}
+
+// Write a log footer to the file
+static void _DebugWriteFooter()
+{
+	time_t		now;
+	char		stamp[64] = "";
+
+	// Print a pretty trailer
+	time(&now);
+#if _WIN32
+	ctime_s(stamp, sizeof(stamp), &now);
+#else
+	ctime_r(&now, stamp);
+#endif // _WIN32
+	strtok(stamp, "\n");
+	fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
+}
+
+#if 0
+#pragma mark -
+#endif
+
+void DebugPreflight(const char *logname, bool UNUSED(redirect), int level, int perms)
+{
+	_DebugEnter();
 	
 	if (logname && *logname)
 	{
-#if _WIN32
-		char	buffer[MAX_PATH*2+1] = {0};
-#else
-		char	buffer[PATH_MAX*2+1] = {0};
-#endif // _WIN32
+		// If we've preflighted already, close the previous log
+		_DebugCloseLogFile();
 
-		// Determine where the log file will go
-#if _WIN32
-		if ((logname[0] != '\\') &&
-				((logname[0] < 'A') || (logname[0] > 'Z') || (logname[1] != ':') || (logname[2] != '\\')) &&
-				((logname[0] < 'a') || (logname[0] > 'z') || (logname[1] != ':') || (logname[2] != '\\')))
-		{
-			if (SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffer) == S_OK)
-				strncat(buffer, "\\", sizeof(buffer)-strlen(buffer)-1); // Path separator
-		}
-#else
-		if (*logname != '/')
-		{
-			const char * home = getenv("HOME");
-		
-			if (! geteuid())
-				strcpy(buffer, "/var/log/");
-			else if (home)
-			{
-#if __APPLE__
-				snprintf(buffer, sizeof(buffer), "%s/Library/Logs/", home);
-#else
-				snprintf(buffer, sizeof(buffer), "%s/log/", home);
-#endif // __APPLE__
-				mkdir(buffer, 0700);
-			}
-		}
-#endif // ! _WIN32
-		strncat(buffer, logname, sizeof(buffer)-strlen(buffer)-1);
-		if (! strstr(logname, ".log") && ! strstr(logname, ".txt"))
-			strncat(buffer, ".log", sizeof(buffer)-strlen(buffer)-1);
-		
-		// Close the previous file
-		if (gOutputFILE && (gOutputFILE != stderr))
-			fclose(gOutputFILE);
-	
-#if _WIN32
-		if ((strlen(buffer) <= MAX_PATH) && (gOutputFILE = fopen(buffer, "a")) != NULL)
-#else
-		if ((strlen(buffer) <= PATH_MAX) && (gOutputFILE = fopen(buffer, "a")))
-#endif // _WIN32
-		{
-#if _WIN32
-			// Disable buffering entirely
-			setvbuf(gOutputFILE, NULL, _IONBF, 0);
+		// Determine where the new log file will go
+		_DebugNameLogFile(logname, gOutputPath, sizeof(gOutputPath));
+		if (perms) gOutputPerms = perms;
 
-			// Apply the suggested (or default) file permissions
-			_chmod(buffer, (perms) ? perms : 0600);
-#else
-			// Enable line buffering
-			setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-			
-			// Apply the suggested (or default) file permissions
-			fchmod(gOutputFileNo, (perms) ? perms : 0600);
-
-			// Cache the file number that matches the FILE
-			gOutputFileNo = fileno(gOutputFILE);
-#endif // _WIN32
-		}
-		else
-		{
-			// Default back to stderr
-			gOutputFILE = stderr;
+		// Open the new file and use it's file descriptor for our logging
+		_DebugOpenLogFile();
+		if (gOutputFILE == NULL) goto CLEANUP;
+	}
+	else if (! gPreflighted)
+	{
+		// Default to stderr if no name is specifieds
+		gOutputFILE = stderr;
 #if ! _WIN32
-			gOutputFileNo = STDERR_FILENO;
+		gOutputFileNo = STDERR_FILENO;
 #endif // ! _WIN32
-		}
 	}
 	
-	if (!gPreflighted)
+	if (! gPreflighted)
 	{
-		time_t		now;
-		char		stamp[64] = "";
-
-		// Print a pretty header
-		time(&now);
-#if _WIN32
-		ctime_s(stamp, sizeof(stamp), &now);
-#else
-		ctime_r(&now, stamp);
-#endif // _WIN32
-		strtok(stamp, "\n");
-		fprintf(gOutputFILE, "--- Log opened %s ---\n", stamp);
+		// Prefix the file with a pretty header
+		_DebugWriteHeader();
 
 		// Ensure this has been preflighted as well
 		if (gDebugLevel == 1)
@@ -264,42 +332,77 @@ void DebugPostflight()
 {
 	_DebugEnter();
 	
+	// Close the existing log, if any
 	if (gPreflighted)
-	{
-		time_t		now;
-		char		stamp[64] = "";
+		_DebugWriteFooter();
+	_DebugCloseLogFile();
 
-		// Print a pretty trailer
-		time(&now);
-#if _WIN32
-		ctime_s(stamp, sizeof(stamp), &now);
-#else
-		ctime_r(&now, stamp);
-#endif // _WIN32
-		strtok(stamp, "\n");
-		fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
-
-		gPreflighted = false;
-	}
-	
-	if (gOutputFILE && (gOutputFILE != stderr))
-	{
-		fclose(gOutputFILE);
-		gOutputFILE = stderr;
-#if ! _WIN32
-		gOutputFileNo = STDERR_FILENO;
-#endif // ! _WIN32
-	}
-#if ! _WIN32
-	else if (gOutputFileNo)
-	{
-		close(gOutputFileNo);
-		gOutputFileNo = STDERR_FILENO;
-	}
-#endif // ! _WIN32
+	gPreflighted = false;
 
 	_DebugLeave();
 }
+
+static void _DebugSwitchLogFile(const char *renameTo, const char *switchTo)
+{
+	// Close the existing log
+	_DebugWriteFooter();
+	_DebugCloseLogFile();
+	
+	if (renameTo)
+	{
+		char		renameBuffer[MAX_PATH_LENGTH + 1] = "";
+
+		// Rename the existing log file, still output to the same path
+		_DebugNameLogFile(renameTo, renameBuffer, sizeof(renameBuffer));
+		rename(gOutputPath, renameBuffer); // Will unlink existing file
+	}
+	else if (switchTo)
+	{
+		// Switch our target to the indicated path
+		_DebugNameLogFile(switchTo, gOutputPath, sizeof(gOutputPath));
+	}
+
+	// Open a new file and use it's file descriptor for our logging
+	_DebugOpenLogFile();
+	if (gOutputFILE)
+		_DebugWriteHeader();
+	else
+		gPreflighted = false;
+}
+
+void DebugSwitchLogFile(const char *newFileName)
+{
+	_DebugEnter();
+
+	if (! gPreflighted)
+		DebugPreflight(newFileName, false, DEBUG_LEVEL_ERROR, 0);
+	else if (newFileName)
+		_DebugSwitchLogFile(NULL, newFileName);
+
+	_DebugLeave();
+}
+
+void DebugRotateLogFile(const char *newFileName)
+{
+	_DebugEnter();
+
+	if (! gPreflighted)
+		DebugPreflight(newFileName, false, DEBUG_LEVEL_ERROR, 0);
+	else if (newFileName)
+		_DebugSwitchLogFile(newFileName, NULL);
+
+	_DebugLeave();
+}
+
+char * CopyDebugHistory()
+{
+	// Unused in this implementation
+	return NULL;
+}
+
+#if 0
+#pragma mark -
+#endif
 
 void DebugMessage(int UNUSED(level), const char *format, ...)
 {
@@ -512,9 +615,4 @@ bool DebugShouldLog(int value)
 	_DebugLeave();
 	
 	return shouldLog;
-}
-
-char * CopyDebugHistory()
-{
-	return NULL;
 }

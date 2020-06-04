@@ -69,6 +69,9 @@ int main(int argc, char **argv)
 // CLEANUP label is the goto target for dFail() macros. 
 CLEANUP:
 	if (fd) close(fd);
+	
+	// Optional postflight call to write trailer before closing log
+	DebugPostflight();
 
 	return result;
 }

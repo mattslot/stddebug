@@ -114,6 +114,10 @@ static int _DebugLevelToSyslogPriority(int level)
 	return LOG_INFO;
 }
 
+#if 0
+#pragma mark -
+#endif
+
 void DebugPreflight(const char *logname, bool redirect, int level, int perms)
 {
 	_DebugEnter();
@@ -177,6 +181,25 @@ void DebugPostflight()
 	
 	_DebugLeave();
 }
+
+void DebugSwitchLogFile(const char *newFileName)
+{
+	; // Unused in this implementation
+}
+
+void DebugRotateLogFile(const char *newFileName)
+{
+	; // Unused in this implementation
+}
+
+char * CopyDebugHistory()
+{
+	return NULL; // Unused in this implementation
+}
+
+#if 0
+#pragma mark -
+#endif
 
 void DebugMessage(int level, const char *format, ...)
 {
@@ -380,9 +403,4 @@ bool DebugShouldLog(int value)
 	_DebugLeave();
 	
 	return shouldLog;
-}
-
-char * CopyDebugHistory()
-{
-	return NULL;
 }
