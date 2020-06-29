@@ -459,6 +459,9 @@ void SetDebugMask(int mask)
 
 int DebugMask(void)
 {
+	if (gDebugLevel == 1)
+		DebugLevel(); // Initialize settings
+
 	return gDebugMask;
 }
 
@@ -466,12 +469,10 @@ bool DebugShouldLog(int value)
 {
 	bool shouldLog = false;
 	
-	_DebugEnter();
 	if (value < 0)
-		shouldLog = (gDebugLevel <= value) ? true : false;
+		shouldLog = (DebugLevel() <= value) ? true : false;
 	else 
-		shouldLog = (gDebugMask & value) ? true : false;
-	_DebugLeave();
+		shouldLog = (DebugMask() & value) ? true : false;
 	
 	return shouldLog;
 }

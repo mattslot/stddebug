@@ -574,12 +574,10 @@ bool DebugShouldLog(int value)
 {
 	bool shouldLog = false;
 	
-	_DebugEnter();
 	if (value < 0)
 		shouldLog = (DebugLevel() <= value) ? true : false;
 	else 
 		shouldLog = (DebugMask() & value) ? true : false;
-	_DebugLeave();
 	
 	return shouldLog;
 }
