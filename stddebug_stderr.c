@@ -208,12 +208,13 @@ static void _DebugOpenLogFile()
 #else
 		// Enable line buffering
 		setvbuf(gOutputFILE, NULL, _IOLBF, 0);
-		
-		// Apply the suggested (or default) file permissions
-		fchmod(gOutputFileNo, (gOutputPerms) ? gOutputPerms : 0600);
 
 		// Cache the file number that matches the FILE
 		gOutputFileNo = fileno(gOutputFILE);
+		
+		// Apply the suggested (or default) file permissions
+		if (gOutputFileNo != -1)
+			fchmod(gOutputFileNo, (gOutputPerms) ? gOutputPerms : 0600);
 #endif // _WIN32
 	}
 	else
