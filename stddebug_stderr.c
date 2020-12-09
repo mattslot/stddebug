@@ -355,7 +355,13 @@ static void _DebugSwitchLogFile(const char *renameTo, const char *switchTo)
 
 		// Rename the existing log file, still output to the same path
 		_DebugNameLogFile(renameTo, renameBuffer, sizeof(renameBuffer));
-		rename(gOutputPath, renameBuffer); // Will unlink existing file
+
+		// POSIX specifies rename() will unlink an existing file if necessary.
+#if _WIN32
+		// But of course, Windows doesn't conform to that, so we do it manually.
+		unlink(renameBuffer);
+#endif _WIN32
+		rename(gOutputPath, renameBuffer);
 	}
 	else if (switchTo)
 	{
