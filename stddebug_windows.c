@@ -212,6 +212,7 @@ void DebugData(const char *label, const void *data, size_t length)
 	unsigned char *	bytes = (unsigned char *)data;
 	char			table[] = "0123456789ABCDEF";
 	char			hex[37], ascii[18];
+	char			stamp[24] = "";
 	char *			buffer = NULL;
 	char *			output = NULL;
 	size_t			i, j, k, x, y;
@@ -257,8 +258,19 @@ void DebugData(const char *label, const void *data, size_t length)
 		if (!gPreflighted)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 		
+		// Optionally prefix the entry with a timestamp
+		if (gDebugStamp)
+		{
+			char	timebuf[12], datebuf[12];
+			
+			_strtime_s(timebuf, sizeof(timebuf));  
+			_strdate_s(datebuf, sizeof(datebuf));  
+
+			snprintf(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
+		}
+
 		// Now that we have the data, print out the label and our buffer
-		i = _scprintf("%s (%zu bytes):\r\n%s", label, length, 
+		i = _scprintf("%s%s (%zu bytes):\r\n%s", stamp, label, length, 
 				(buffer) ? buffer : " -- out of memory --\r\n");
 		if ((output = (char *) malloc(i+1)))
 		{
