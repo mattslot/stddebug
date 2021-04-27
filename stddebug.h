@@ -140,9 +140,19 @@
   
 #endif // TARGET_OS_MAC || TARGET_OS_IPHONE
 
-#if DEBUG
+// Determine if this is being run through a static analyzer
+#if defined(__clang__)
+	#if __has_feature(attribute_analyzer_noreturn)
+		#define __DEBUG_STATIC_ANALYZER__	1
+	#endif
+#elif defined(_MSC_VER)
+	#if _PREFAST_
+		#define __DEBUG_STATIC_ANALYZER__	1
+	#endif
+#endif // __GNUC__
 
-	// Hard-coded breakpoint
+// Hard-coded breakpoint
+#if DEBUG
 
   #if defined(__GNUC__)
 	#if defined(__ppc__) || defined(__ppc64__)
@@ -186,6 +196,8 @@
 	
   #if DEBUG
 	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); DEBUGGER(); abort(); } while(0)
+  #elif __DEBUG_STATIC_ANALYZER__
+	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); abort(); } while(0)
   #else
 	#define dAssertionFailure(m,...)	do { if (DebugShouldLog(DEBUG_LEVEL_FATAL)) DebugMessage(DEBUG_LEVEL_FATAL, __DEBUGSTR__(m __WHERE__ "\n"), ## __VA_ARGS__); } while(0)
   #endif // DEBUG
