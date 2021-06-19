@@ -155,11 +155,13 @@
 #if DEBUG
 
   #if defined(__GNUC__)
-	#if defined(__ppc__) || defined(__ppc64__)
+  	#if __has_builtin(__builtin_debugtrap)
+  		#define DEBUGGER()	__builtin_debugtrap()
+	#elif defined(__ppc__) || defined(__ppc64__)
 		#define DEBUGGER()	__asm__ volatile ("trap")
 	#elif defined(__i386__) || defined(__x86_64__)
 		#define DEBUGGER()	__asm__ volatile ("int3")
-	#elif defined(__arm__) || defined(__arm64__)
+	#elif TARGET_OS_IPHONE
 		#define DEBUGGER()	kill(getpid(), SIGINT)
 	#else
 		#error Architecture not supported
