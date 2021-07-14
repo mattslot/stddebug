@@ -98,11 +98,11 @@ static char * _DebugFormatTimestamp(char *buffer, size_t length, unsigned accura
 	{
 		SYSTEMTIME			st;
 
-		GetLocalTime(&systime);
+		GetLocalTime(&st);
 	
 		if (accuracy >= 1000)
 			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d.%03d] ", 
-				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMillisecond);
+				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 		else
 			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d] ", 
 				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
@@ -193,7 +193,7 @@ void DebugMessage(int UNUSED(level), const char *format, ...)
 		va_start(args, format);
 		length = _vscprintf(format, args);
 		bytes = strlen(stamp) + length + strlen("\r\n") + 1;
-		if ((buffer = calloc(1, length + 1)) != NULL)
+		if ((buffer = calloc(1, bytes + 1)) != NULL)
 		{
 			snprintf(buffer, bytes, "%s", stamp); // Prefix with the optional stamp
 			vsnprintf_s(buffer + strlen(buffer), length + 1, length + 1, format, args);
@@ -280,7 +280,7 @@ void DebugData(const char *label, const void *data, size_t length)
 				(buffer) ? buffer : " -- out of memory --\r\n");
 		if ((output = (char *) malloc(i+1)))
 		{
-			_snprintf(output, i+1, "%s (%zu bytes):\r\n%s", label, length, 
+			snprintf(output, i+1, "%s (%zu bytes):\r\n%s", label, length, 
 					(buffer) ? buffer : " -- out of memory --\r\n");
 			OutputDebugStringA(output);
 		}
