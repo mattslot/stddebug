@@ -70,7 +70,7 @@ static	int							gOutputPerms = 0600;
 static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
-static	bool						gDebugStamp = 0;
+static	unsigned					gDebugStamp = 0;
 
 static	pthread_mutex_t				gMutex = PTHREAD_MUTEX_INITIALIZER;
 static	pthread_t					gMutexThread = NULL;
@@ -227,6 +227,48 @@ static void _DebugWriteFooter()
 	ctime_r(&now, stamp);
 	strtok(stamp, "\n");
 	fprintf(gOutputFILE, "--- Log closed %s ---\n", stamp);
+}
+
+// Based on https://stackoverflow.com/a/60254428
+// Pass 30 bytes of storage for microsecond accuracy.
+static char * _DebugFormatTimestamp(char *buffer, size_t length, unsigned accuracy)
+{
+	struct timespec			ts;
+	struct tm				ltime;
+
+	if (accuracy && 
+			(0 == clock_gettime(CLOCK_REALTIME, &ts)) && 
+			(NULL != localtime_r(&ts.tv_sec, &ltime)))
+	{
+		double				scalar = 0;
+		int					digits = 0;
+		long				decimal = 0;
+
+		if (accuracy >= 1000000)
+			{ scalar = 1000; digits = 6; }
+		else if (accuracy >= 1000)
+			{ scalar = 1000000; digits = 3; }
+	
+		if (scalar)
+		{
+			char			ymdhms[24];
+
+			// round nanoseconds to desired resolution
+			if (ts.tv_nsec + scalar / 2 >= 1000000000)
+				{ ts.tv_sec++; decimal = 0; }
+			else
+				decimal = (ts.tv_nsec + scalar / 2) / scalar;
+
+			strftime(ymdhms, sizeof(ymdhms), "%Y-%m-%d %H:%M:%S", &ltime);
+			snprintf(buffer, length, "[%s.%0*li] ", ymdhms, digits, decimal);
+		}
+		else
+			strftime(buffer, length, "[%Y-%m-%d %H:%M:%S] ", &ltime);
+	}
+    else
+		buffer[0] = 0;
+	
+	return buffer;
 }
 
 #if 0
@@ -399,17 +441,11 @@ void DebugMessage(int level, __DEBUGSTR_ARG__ format, ...)
 		
 		if (cstr)
 		{
-			char			stamp[24] = "";
+			char			stamp[32] = "";
 			const char *	eol = "";
 
 			// Optionally prefix the entry with a timestamp
-			if (gDebugStamp)
-			{
-				struct tm	ltime;
-				time_t		now = time(NULL);
-
-				strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
-			}
+			_DebugFormatTimestamp(stamp, sizeof(stamp), gDebugStamp);
 		
 			// Append a trailing linefeed if necessary
 			index = CFStringGetLength(format);
@@ -434,7 +470,7 @@ void DebugData(const char *label, const void *data, size_t length)
 	unsigned char *	bytes = (unsigned char *)data;
 	char			table[] = "0123456789ABCDEF";
 	char			hex[37], ascii[18];
-	char			stamp[24] = "";
+	char			stamp[32] = "";
 	char *			buffer = NULL;
 	size_t			i, j, k, x, y;
 
@@ -480,13 +516,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, false, DEBUG_LEVEL_ERROR, 0);
 		
 		// Optionally prefix the entry with a timestamp
-		if (gDebugStamp)
-		{
-			struct tm	ltime;
-			time_t		now = time(NULL);
-
-			strftime(stamp, sizeof(stamp), "[%F %T] ", localtime_r(&now, &ltime));
-		}
+		_DebugFormatTimestamp(stamp, sizeof(stamp), gDebugStamp);
 	
 		// Now that we have the data, print out the label and our buffer
 		fprintf(gOutputFILE, "%s%s (%zu bytes):\n%s", stamp, label, length, 
@@ -502,12 +532,19 @@ void SetDebugEnabled(int enable)
 	gDebugEnabled = (enable) ? true : false;
 }
 
-void SetDebugTimestamp(bool showTimestamp)
+void SetDebugTimestamp(unsigned showTimestamp)
 {
-	gDebugStamp = showTimestamp;
+	if (showTimestamp >= 1000000)
+		gDebugStamp = 1000000; // microseconds
+	else if (showTimestamp >= 1000)
+		gDebugStamp = 1000; // milliseconds
+	else if (showTimestamp)
+		gDebugStamp = 1; // seconds
+	else
+		gDebugStamp = 0; // disabled
 }
 
-bool DebugTimestamp()
+unsigned DebugTimestamp()
 {
 	return gDebugStamp;
 }

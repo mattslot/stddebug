@@ -61,7 +61,6 @@ static	os_log_t					gOutputOSLog = NULL;
 static	bool						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
-static	bool						gDebugStamp = 0;
 
 static	pthread_mutex_t				gMutex = PTHREAD_MUTEX_INITIALIZER;
 static	pthread_t					gMutexThread = NULL;
@@ -401,14 +400,14 @@ void SetDebugEnabled(int enable)
 	gDebugEnabled = (enable) ? true : false;
 }
 
-void SetDebugTimestamp(bool showTimestamp)
+void SetDebugTimestamp(unsigned showTimestamp)
 {
-	gDebugStamp = showTimestamp;
+	; // Unused
 }
 
-bool DebugTimestamp()
+unsigned DebugTimestamp()
 {
-	return gDebugStamp;
+	return 0;
 }
 
 void SetDebugLevel(int level)

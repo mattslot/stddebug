@@ -392,16 +392,20 @@ extern __DEBUGSTR_TYPE__ CopyDebugHistory(void);
 extern void SetDebugEnabled(int enable);
 
 /*!
-	@abstract Specify that timestamps that will be logged during debugging.
-	@param showTimestamp true to prefix debug messages with timestamps.
+	@abstract Specify whether timestamps should be logged, and at what resoluion.
+	@param timestamp Pass a non-zero number to include a timestamp with each line
+		logged. Default resolution is 1 second, or pass 1000 to specify milliseconds.
+	@discussion
+		Not all logging implementations support higher resolution timestamps. In 
+		such cases, the most accurate fallback available will be selected.
 */
-extern void SetDebugTimestamp(bool showTimestamp);
+extern void SetDebugTimestamp(unsigned timestamp);
 
 /*!
 	@abstract Return the current debug timestamp setting.
-	@result true if timestamps are enable for debug messages.
+	@result Zero if timestamps are disabled, or a non-zero resolution.
 */
-extern bool DebugTimestamp(void);
+extern unsigned DebugTimestamp(void);
 
 /*!
 	@abstract Specify how much data will be logged during debugging.

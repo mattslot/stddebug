@@ -54,7 +54,7 @@ static	BOOL						gPreflighted = 0;
 static	BOOL						gDebugEnabled = 1;
 static	int							gDebugLevel = 1;
 static	int							gDebugMask = 0;
-static	BOOL						gDebugStamp = 0;
+static	unsigned					gDebugStamp = 0;
 
 static	INIT_ONCE					gInitOnce = INIT_ONCE_STATIC_INIT; 
 static	CRITICAL_SECTION			gCriticalSection;
@@ -89,6 +89,28 @@ static char *_DebugShortenPath(char *path)
 	}
 	
 	return path;
+}
+
+// Pass 30 bytes of storage for microsecond accuracy.
+static char * _DebugFormatTimestamp(char *buffer, size_t length, unsigned accuracy)
+{
+	if (accuracy)
+	{
+		SYSTEMTIME			st;
+
+		GetLocalTime(&systime);
+	
+		if (accuracy >= 1000)
+			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d.%03d] ", 
+				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMillisecond);
+		else
+			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d] ", 
+				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+	}
+    else
+		buffer[0] = 0;
+	
+	return buffer;
 }
 
 #if 0
@@ -152,7 +174,7 @@ char * CopyDebugHistory()
 
 void DebugMessage(int UNUSED(level), const char *format, ...)
 {
-	char			stamp[24] = "";
+	char			stamp[32] = "";
 	char *			buffer = NULL;
 	size_t			length;
 	size_t			bytes;
@@ -165,15 +187,7 @@ void DebugMessage(int UNUSED(level), const char *format, ...)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 
 		// Optionally prefix the entry with a timestamp
-		if (gDebugStamp)
-		{
-			char	timebuf[12], datebuf[12];
-			
-			_strtime_s(timebuf, sizeof(timebuf));  
-			_strdate_s(datebuf, sizeof(datebuf));  
-
-			snprintf(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
-		}
+		_DebugFormatTimestamp(stamp, sizeof(stamp), gDebugStamp);
 
 		// Format the message into an editable buffer
 		va_start(args, format);
@@ -212,7 +226,7 @@ void DebugData(const char *label, const void *data, size_t length)
 	unsigned char *	bytes = (unsigned char *)data;
 	char			table[] = "0123456789ABCDEF";
 	char			hex[37], ascii[18];
-	char			stamp[24] = "";
+	char			stamp[32] = "";
 	char *			buffer = NULL;
 	char *			output = NULL;
 	size_t			i, j, k, x, y;
@@ -259,15 +273,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			DebugPreflight(NULL, FALSE, DEBUG_LEVEL_ERROR, 0);
 		
 		// Optionally prefix the entry with a timestamp
-		if (gDebugStamp)
-		{
-			char	timebuf[12], datebuf[12];
-			
-			_strtime_s(timebuf, sizeof(timebuf));  
-			_strdate_s(datebuf, sizeof(datebuf));  
-
-			snprintf(stamp, sizeof(stamp), "[%s %s] ", datebuf, timebuf);
-		}
+		_DebugFormatTimestamp(stamp, sizeof(stamp), gDebugStamp);
 
 		// Now that we have the data, print out the label and our buffer
 		i = _scprintf("%s%s (%zu bytes):\r\n%s", stamp, label, length, 
@@ -292,12 +298,17 @@ void SetDebugEnabled(int enable)
 	gDebugEnabled = (enable) ? TRUE : FALSE;
 }
 
-void SetDebugTimestamp(bool showTimestamp)
+void SetDebugTimestamp(unsigned showTimestamp)
 {
-	gDebugStamp = showTimestamp;
+	if (showTimestamp >= 1000)
+		gDebugStamp = 1000; // milliseconds
+	else if (showTimestamp)
+		gDebugStamp = 1; // seconds
+	else
+		gDebugStamp = 0; // disabled
 }
 
-bool DebugTimestamp()
+unsigned DebugTimestamp()
 {
 	return gDebugStamp;
 }

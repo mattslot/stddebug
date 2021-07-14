@@ -214,14 +214,14 @@ void SetDebugEnabled(int enable)
 	gDebugEnabled = (enable) ? true : false;
 }
 
-void SetDebugTimestamp(bool showTimestamp)
+void SetDebugTimestamp(unsigned showTimestamp)
 {
 	(void)showTimestamp; // Ignored
 }
 
-bool DebugTimestamp()
+unsigned DebugTimestamp()
 {
-	return false;
+	return 0;
 }
 
 void SetDebugLevel(int level)
