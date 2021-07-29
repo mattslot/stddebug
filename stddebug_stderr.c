@@ -290,11 +290,11 @@ static char * _DebugFormatTimestamp(char *buffer, size_t length, unsigned accura
 	{
 		SYSTEMTIME			st;
 
-		GetLocalTime(&systime);
+		GetLocalTime(&st);
 	
 		if (accuracy >= 1000)
 			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d.%03d] ", 
-				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMillisecond);
+				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 		else
 			snprintf(buffer, length, "[%02d/%02d/%02d %02d:%02d:%02d] ", 
 				st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
