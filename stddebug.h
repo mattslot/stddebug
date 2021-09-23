@@ -142,7 +142,7 @@
 
 // Determine if this is being run through a static analyzer
 #if defined(__clang__)
-	#if __has_feature(attribute_analyzer_noreturn)
+	#if __clang_analyzer__
 		#define __DEBUG_STATIC_ANALYZER__	1
 	#endif
 #elif defined(_MSC_VER)
