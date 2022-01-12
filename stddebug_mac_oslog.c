@@ -378,7 +378,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0;
 			ascii[y] = 0;
-			k += sprintf(buffer + k, "  0x%.16" PRIXPTR " | %s| %s", (uintptr_t)(bytes + i), hex, ascii);
+			k += sprintf(buffer + k, "  0x%.16" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
 		}
 		
 		_DebugEnter();
