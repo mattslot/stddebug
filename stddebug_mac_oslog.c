@@ -344,7 +344,7 @@ void DebugData(const char *label, const void *data, size_t length)
 {
 	unsigned char *	bytes = (unsigned char *)data;
 	char			table[] = "0123456789ABCDEF";
-	char			hex[33], ascii[18];
+	char			hex[37], ascii[18];
 	char *			buffer = NULL;
 	size_t			i, j, k, x, y;
 
@@ -378,7 +378,7 @@ void DebugData(const char *label, const void *data, size_t length)
 			// Now format the string nicely into our buffer, and advance our mark
 			hex[x] = 0;
 			ascii[y] = 0;
-			k += sprintf(buffer + k, "  0x%.16" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
+			k += snprintf(buffer + k, 80, "  0x%.16" PRIXPTR " | %s| %s\n", (uintptr_t)(bytes + i), hex, ascii);
 		}
 		
 		_DebugEnter();
