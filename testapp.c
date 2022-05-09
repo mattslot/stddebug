@@ -1,7 +1,7 @@
 /*!
 	@file testapp.c
 	@abstract Common debugging macros
-	@copyright (c) 1997-2015 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2022 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),

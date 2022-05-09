@@ -1,7 +1,7 @@
 /*!
 	@file stddebug_mac_oslog.c
 	@abstract Common debugging utilities
-	@copyright (c) 1997-2021 by Matt Slot <mattslot@gmail.com>.
+	@copyright (c) 1997-2022 by Matt Slot <mattslot@gmail.com>.
 	
 	Permission is hereby granted, free of charge, to any person obtaining a
 	copy of this software and associated documentation files (the "Software"),
